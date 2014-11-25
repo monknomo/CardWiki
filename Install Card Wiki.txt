@@ -1,0 +1,31 @@
+﻿Install homebrew
+ruby -e "$(curl -fsSL https://raw.github.com/Homebrew/homebrew/go/install)"
+
+
+Install pyenv
+        From the terminal, run these commands:
+brew doctor
+brew update
+        brew install pyenv
+        brew install pyenv-virtualenv
+        echo ‘eval “$(pyenv init -_”’ >> ~/.bash_profile
+
+
+
+
+Install and Configure python
+        pyenv install 3.3.3
+        pyenv virtualenv 3.3.3 card-wiki
+        pyenv activate card-wiki
+        pip install bottle
+        pip install sqlalchemy
+        pip install markdown
+
+
+Install Card Wiki
+        Copy the card_wiki folder from the shared communal folder
+        Navigate to the card_wiki folder location in the terminal
+        Run python init.py
+        Verify that a file called “wiki.db” has been created
+        Run python app.py
+        Open a browser and go to http://localhost:8080

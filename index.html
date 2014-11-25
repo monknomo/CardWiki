@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Card Wiki</title>
+
+    <!-- Bootstrap -->
+    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+	<link href="static/css/bootstrap-theme.min.css" rel="stylesheet">
+	<link href="static/css/jquery.tagsinput.css" rel="stylesheet">
+	<link href="static/css/custom.css" rel="stylesheet">
+    <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script type="text/javascript" src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
+      <script type="text/javascript" src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
+    <![endif]-->
+	
+	<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+	<script type="text/javascript" src="static/js/epiceditor.min.js"></script>
+	<script type="text/javascript" src="static/js/validator.min.js"></script>
+	<script type="text/javascript" src="static/js/jquery.tagsinput.min.js"></script>
+	<script>
+		String.prototype.format = String.prototype.f = function() {
+			var s = this,
+				i = arguments.length;
+
+			while (i--) {
+				s = s.replace(new RegExp('\\{' + i + '\\}', 'gm'), arguments[i]);
+			}
+			return s;
+		};
+		cards = {};
+		editors = {};
+		new_card_editor = null;
+		card_template = "<div id='card_{0}' class='jumbotron' ondblclick='openEditor_dblclick(this)'>"+
+							"<div class='card_title_holder'>" +
+								"<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>" +
+								"<span id='title_{0}' class='card_title'><h1>{2}</h1></span>" +
+								"<span id='titleEditor_{0}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{0}' type='text' class='form-control'value='{2}'></input></span>" +
+							"</div>" +
+							"<hr>" +
+							"<div style='height:1em;width:100%;clear:both;'></div>"+							
+							"<div id='content_{0}' class='card_content'>{1}</div>"+
+							"<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
+							"<div id='tagsBox_{0}' style='margin-bottom:.5em;'><input id='tags_{0}' type='text' ></input></div> " +
+							"<div><p class='card-control-buttons'>"+
+								"<a id='editButton_{0}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>"+
+								"<a id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>"+
+								"<a id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>"+
+								"</p>" +
+							"</div>"+
+						"</div>";
+		
+		card_template_sans_title = "<div id='card_{0}' class='jumbotron' ondblclick='openEditor_dblclick(this)'>" +
+										"<div>"+
+											"<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>" +
+										"<div style='height:1em;clear:both;'></div>" +
+										"<div id='content_{0}' class='card_content' >{1}</div>"+
+										"<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
+										"<div id='tagsBox_{0}' style='margin-bottom:.5em;width:100%'><input id='tags_{0}' type='text' ></input></div> " +
+										"<div style='clear:both;'><p class='card-control-buttons'>"+
+											"<a id='editButton_{0}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>"+
+											"<a id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>"+
+											"<a id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>"+
+										"</p></div>"+
+									"</div>";
+		
+		$(function() {
+		  $('a[href*=#]:not([href=#])').click(function() {
+			if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
+			  var target = $(this.hash);
+			  target = target.length ? target : $('[name=' + this.hash.slice(1) +']');
+			  if (target.length) {
+				$('html,documentElement').animate({
+				  scrollTop: target.offset().top
+				}, 1000);
+				return false;
+			  }
+			}
+		  });
+		  init();
+		});
+						
+		function init(){
+			$(".saveCardButton").hide();
+			$("#admin").hide();
+			$("#queryDisplay").hide();
+			$.ajax({url:'http://localhost:8080/cards/__startCard', 
+					type:'GET', 
+					success: function(data){
+							console.log(data);
+							cards[data.linkable_title] = data;
+							if(data.linkable_title.slice(0,2) == "__"){
+								
+								$("#cardList").html(card_template_sans_title.format(data.linkable_title, data.rendered_content));
+							}else{
+								var pretty_title = data.title.replace("_", " ");
+								$("#cardList").html(card_template.format(data.linkable_title, data.rendered_content, data.title));
+							}							
+							$('.saveCardButton').hide();
+							$('.cancelCardEditButton').hide();
+							$('#tags___startCard').tagsInput({
+								height:'100%',
+								width:'85%',
+								onRemoveTag:function(tag){removeTag(data.linkable_title, tag);},
+								onAddTag:function(tag){addTag(data.linkable_title, tag);},
+								onClickTag:function(tag){tagClicked(tag, data.linkable_title);}
+							});
+							$.ajax({url:'http://localhost:8080/cards/__startCard/tags',
+											type:'GET',
+											success: function(data){
+												console.log(data);
+												$('#tags___startCard').importTags('');
+												if(data.tags == null || data.tags.length < 1){
+													//do nothing
+												}else{
+													console.log(data);
+													var tagVals = "";
+													for( var i = 0; i < data.tags.length; i++){
+														console.log(data.tags[i]);
+														if(tagVals == ""){
+															tagVals = data.tags[i].tag;
+														}else{
+															tagVals = tagVals + "," + data.tags[i].tag;
+														}
+													}
+													console.log(tagVals);
+													$('#tags___startCard').importTags(tagVals);		
+													//$('.tag').click( tagClicked);													
+												}
+											}
+									});
+						}
+				});
+		}
+		
+		
+		
+		function removeCard(obj){
+			var title = obj.id.substring(11);
+			$("#card_"+title).remove();
+			editors[title] = null;
+			cards[title] = null;
+		}
+		
+		function deselectAll(){
+			if (window.getSelection) {
+			  if (window.getSelection().empty) {  // Chrome
+				window.getSelection().empty();
+			  } else if (window.getSelection().removeAllRanges) {  // Firefox
+				window.getSelection().removeAllRanges();
+			  }
+			} else if (document.selection) {  // IE?
+			  document.selection.empty();
+			}
+		}
+		
+		function populateEditor(linkable_title){
+			deselectAll();
+			$("#title_"+linkable_title).hide();
+			$("#titleEditor_"+linkable_title).show();
+			$("#content_"+linkable_title).hide();
+			$("#editButton_"+linkable_title).hide();
+			$("#saveButton_"+linkable_title).show();
+			$("#cancelCardEditButton_"+linkable_title).show();
+			if (editors[linkable_title] == null){
+				editors[linkable_title] = new EpicEditor({container:"editor_"+linkable_title, 
+													basePath:'http://localhost:8080/static',
+													autogrow:{minHeight:225, maxHeight:800, scroll:true}});
+				editor = editors[linkable_title];
+			}else{
+				editor = editors[linkable_title];
+			}
+			editor.load();
+			$("#editor_"+linkable_title).show();
+			if ( editor.getFiles('cardWiki_'+linkable_title) === undefined){
+				editor.importFile('cardWiki_'+linkable_title,cards[linkable_title].content);
+			}else{
+				if( Date.parse(cards[linkable_title].edited_at) > Date.parse(editor.getFiles('cardWiki_'+linkable_title).modified) ){
+					editor.importFile('cardWiki_'+linkable_title,cards[linkable_title].content);
+				}else{
+					editor.open('cardWiki_'+linkable_title);
+				}
+				
+			}
+		}
+		
+		function openEditor_dblclick(obj){
+			var title = obj.id.substring(5);
+			populateEditor(title);
+		}
+		
+		function openEditor(obj){				
+			var title = obj.id.substring(11);
+			populateEditor(title);			
+		}
+		
+		function saveCard(obj){
+			
+			var linkable_title = obj.id.substring(11);
+			var editor = editors[linkable_title];
+			editor.save();
+			var content = editor.exportFile('cardWiki_'+linkable_title);			
+			newCard = {linkable_title:linkable_title, content:content, edited_by:null};
+			if($("#titleEditorInput_"+linkable_title)[0]){
+				newCard.title = $("#titleEditorInput_"+linkable_title)[0].value;
+			}else{
+				newCard.title = linkable_title;
+			}
+			console.log(newCard);
+			$.ajax({url:"http://localhost:8080/cards/"+linkable_title,
+					type:'PUT',
+					contentType:'application/json',
+					data:JSON.stringify(newCard),
+					success: function(data){
+								console.log(data);
+								$("#editButton_"+linkable_title).show();
+								$("#saveButton_"+linkable_title).hide();
+								$("#cancelCardEditButton_"+linkable_title).hide();
+								cards[data.linkable_title] = data;
+								$("#content_"+linkable_title).html(data.rendered_content);
+								if(data.linkable_title.slice(0,2) == "__"){
+									//do nothing
+								}else{
+									$("#title_"+linkable_title).html("<h1>" + data.title + "</h1>");
+								}
+								editor.unload(function(){
+									$("#content_"+linkable_title).show();
+									$("#editor_"+linkable_title).hide();
+									//$("#tagEditor_"+linkable_title).hide();
+									$("#titleEditor_"+linkable_title).hide();
+									$("#title_"+linkable_title).show();
+									//$("#tags_"+linkable_title).show();
+									editors[linkable_title] = null;
+								});
+								
+							}
+					});
+		}	
+		
+		function cancelEdit(obj){
+			var title = obj.id.substring(21);
+			var editor = editors[title];
+			$("#editButton_"+title).show();
+			$("#saveButton_"+title).hide();
+			$("#cancelCardEditButton_"+title).hide();
+
+			editor.unload(function(){
+				$("#content_"+title).show();
+				$("#editor_"+title).hide();
+				$("#titleEditor_"+title).hide();
+				$("#title_"+title).show();
+				editors[title] = null;
+			});
+			
+		}
+		
+		function prependCard(obj1, obj){
+			console.log(obj);
+			var active_div = $(obj1).parents("div.jumbotron")[0];
+			console.log(active_div);
+			var active_title = active_div.id.substring(5);
+			console.log(active_title);
+			if(cards[obj.substring(7)] != null){
+				console.log("already open, scroll to this sucker?");
+			}else{
+				$.ajax({url:'http://localhost:8080' + obj, 
+						type:'GET', 
+						success: function(data){
+								cards[data.linkable_title] = data;
+								if(data.content == null){
+									console.log(data);
+									if(data.linkable_title.slice(0,2) == "__"){
+										$("#"+active_div.id).after(card_template_sans_title.format(data.linkable_title, ""));
+									}else{
+										$("#"+active_div.id).after(card_template.format(data.linkable_title, "", data.title));
+									}
+									$('#tags_' + data.linkable_title).tagsInput({
+										height:'100%',
+										width:'85%',
+										onRemoveTag:function(tag){deleteTag(data.linkable_title, tag);},
+										onAddTag:function(tag){addTag(data.linkable_title, tag);},
+										onClickTag:function(tag){tagClicked(tag, data.linkable_title);}
+									});
+									openEditor($("#editButton_"+data.linkable_title)[0]);
+									$('html,documentElement').animate({
+									  scrollTop: $('#card_'+data.linkable_title).offset().top - 70
+									}, 100);
+								}else{
+									if(data.linkable_title.slice(0,2) == "__"){
+										$("#"+active_div.id).after(card_template_sans_title.format(data.linkable_title, data.rendered_content));
+									}else{
+										$("#"+active_div.id).after(card_template.format(data.linkable_title, data.rendered_content, data.title));
+									}
+									$('#saveButton_'+data.linkable_title).hide();
+									$('#cancelCardEditButton_'+data.linkable_title).hide();
+									$('#titleEditor_'+data.linkable_title).hide();
+                                    $('html,documentElement').animate({
+									  scrollTop: $('#card_'+data.linkable_title).offset().top - 70
+									}, 100);
+									$('#tags_' + data.linkable_title).tagsInput({
+										height:'100%',
+										width:'85%',
+										onRemoveTag:function(tag){deleteTag(data.linkable_title, tag);},
+										onAddTag:function(tag){addTag(data.linkable_title, tag);},
+										onClickTag:function(tag){tagClicked(tag, data.linkable_title);}
+									});
+									
+									getTags(data.linkable_title);
+								}
+							}
+					});
+			}
+		}
+		
+		card = function(linkable_title, title, content, tags){
+		
+		};
+		
+		function getTags(taggedCard){
+			$.ajax({url:'http://localhost:8080/cards/{0}/tags'.format(taggedCard),
+					type:'GET',
+					success: function(data){
+						$('#tagsInput_'+taggedCard).importTags('');
+						if(data.tags == null || data.tags.length < 1){
+							//do nothing
+						}else{
+						var tagVals = "";
+							for( var i = 0; i < data.tags.length; i++){
+								console.log(data.tags[i]);
+								if(tagVals == ""){
+									tagVals = data.tags[i].tag;
+								}else{
+									tagVals = tagVals + "," + data.tags[i].tag;
+								}
+								//$("#tags___startCard").append("<a rel='tag' href='{0}'>{1} </a>".format(data.tags[i].href, data.tags[i].tag));
+							}
+							$('#tags_'+taggedCard).importTags(tagVals);	
+							//$('.tag').off('click', null);
+							
+							//$('.tag').click( tagClicked);	
+						}
+					}
+			});
+		}
+		
+		function addTag(taggedCard, tag){
+			console.log(taggedCard);
+			console.log(tag);
+			var tagResults = {'tags':[{'tag':tag, 'tagged_card':taggedCard}]}
+			$.ajax({url:'http://localhost:8080/cards/' + taggedCard + '/tags',
+					type:'PUT',
+					contentType:'application/json',
+					data:JSON.stringify(tagResults),
+					success: function(data){							
+							console.log(data);
+							getTags(taggedCard);
+						}
+					});
+		}
+		
+		function deleteTag(taggedCard, tag){
+			$.ajax({url:"http://localhost:8080/cards/"+taggedCard+"/tags/"+tag,
+					type:'DELETE',
+					success: function(data){
+								console.log(data);
+							}
+					});
+		}
+		
+		function tagClicked(evt, linkable_title){	
+			console.log("tag clicked");
+			//var linkable_title = $(evt.target).parent().parent().parent()[0].id.substring(8);
+			var tag = evt.data;
+			console.log(tag);
+			//removes &nbsp;&nbsp; from the end
+			//tag = tag.substring(0,tag.length-12);
+			$.ajax({url:'http://localhost:8080/tags/'+tag,
+					type:'GET',
+					success: function(data){							
+							console.log(data);
+							var cardList = "<h1>"+tag+" tag</h1><ul>"
+							for(var i = 0; i < data.cards.length; i++){
+								cardList += "<li><a href='#card_{0}' onclick='prependCard(this, {1})'>{2}</a></li>".format(data.cards[i].linkable_title, data.cards[i].href, data.cards[i].title)
+							}
+							cardList += "</ul";
+							console.log(cardList);
+							$('#card_'+linkable_title).after("<div class='jumbotron' id='tagList_" + tag + "'>"+cardList+"</div>");
+						}
+					});
+		}
+		
+		function saveNewCard(obj){
+			var title = $("#newCardTitleInput").val().replace(new RegExp(" ",'g'), "_");
+			var content = new_card_editor.exportFile();
+			var newCard =  {title:title, content:content, edited_by:null};
+			$.ajax({url:"http://localhost:8080/cards/"+title,
+					type:'PUT',
+					contentType:'application/json',
+					data:JSON.stringify(newCard),
+					success: function(data){
+								prependCard("#newCardEditor", "/cards/" + title);
+								new_card_editor.remove('newCardEditor');
+								new_card_editor = null;
+								$("#newCard").remove();
+							}
+					});
+		}
+		
+		function cancelNewCard(obj){
+			new_card_editor.remove('newCardEditor');
+			new_card_editor = null;
+			$("#newCard").remove();
+		}
+		
+		function createNewCard(){
+			if(new_card_editor == null){
+				
+				$("#cardList").prepend("<div id='newCard' class='jumbotron'>" + 
+											"<div class='input-group input-group-lg'>" +
+												"<span id='newCardTitle' class='input-group-addon'>Title</span>" +
+												"<input id='newCardTitleInput' type='text' class='form-control' placeholder='title'></input>" + 
+											"</div>" +
+											"<div id='newCardEditor' class='epiceditor' style='padding-top:2em;height:16em;'></div>" + 
+											"<p class='card-control-buttons'>"+
+												"<a id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveNewCard(this)'>Save</a>"+
+												"<a id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelNewCard(this)'>Cancel</a>"+
+											"</p>"+
+											"</div>");
+				
+				new_card_editor = new EpicEditor({container:"newCardEditor", 
+														basePath:'http://localhost:8080/static',
+														focusOnLoad:true,
+														autogrow:{minHeight:350, maxHeight:false, scroll:true}});
+				
+				new_card_editor.load();
+				$('html,documentElement').animate({
+							  scrollTop: -70
+							}, 1000);
+			}else{
+				$('html,documentElement').animate({
+									  scrollTop: -70
+									}, 1000);
+			}
+		}
+		
+		function openAdmin(){
+			$("#cardList").hide();
+			$("#admin").show();
+			$("#queryDisplay").hide();
+		}
+		
+		function discardAdminChanges(){
+			$("#cardList").show();
+			$("#admin").hide();
+			$("#queryDisplay").hide();
+		}
+		
+		function listAllCards(){
+			$("#cardList").hide();
+			$("#admin").hide();
+			$("#queryDisplay").show();
+			$.ajax({url:'http://localhost:8080/cards',
+						type:'GET',
+						success: function(data){
+							console.log(data);
+						}
+				});
+		}
+	</script>
+	
+  </head>
+  <body role="document" style="padding-top:70px;">
+	<div class="navbar navbar-default navbar-fixed-top" role="navigation">
+	  <div class="container-fluid">
+		<!-- Brand and toggle get grouped for better mobile display -->
+		<div class="navbar-header">
+		  <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#cardwiki-navbar-collapse-1">
+			<span class="sr-only">Toggle navigation</span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+			<span class="icon-bar"></span>
+		  </button>
+		  <a class="navbar-brand" href="#" onclick="openAndGotoStartCard()">Card Wiki</a>
+		</div>
+
+		<!-- Collect the nav links, forms, and other content for toggling -->
+		<div class="collapse navbar-collapse" id="cardwiki-navbar-collapse-1">
+		  <ul class="nav navbar-nav navbar-right">
+			<li><a href="#" onclick="createNewCard()">New Card</a></li>
+			<li class="dropdown">
+				<a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin<b class="caret"></b></a>
+				<ul class="dropdown-menu">
+					<li><a href="#" onclick="listAllCards()">All Cards</a></li>
+					<li><a href="#" onclick="openAdmin()">Settings</a></li>
+				</ul>
+			</li>
+		  </ul>
+		</div><!-- /.navbar-collapse -->
+	  </div><!-- /.container-fluid -->
+	</div>
+	<div id="cardList" class="container">		
+	</div><!-- /container -->
+	<div id="admin" class="container">
+		<form role="form">
+			<div class="form-group">
+				<div class="input-group">
+					<span class="input-group-addon"><label for="wikiName">Wiki Name</label></span>
+					<input type="text" class="form-control" id="wikiName" placeholder="Card Wiki"></input>
+				</div>
+			</div>
+			<div class="form-group">
+				<div class="input-group">
+					<span class="input-group-addon"><label for="startCard">Starting Card</label></span>
+					<input type="text" class="form-control" id="startCard" placeholder="__startCard"></input>
+				</div>
+			</div>
+			<button class="btn btn-lg btn-success">Save</button>
+			<a class="btn" onclick="discardAdminChanges()" role="button">Cancel</a>
+		</form>
+	</div><!-- /container -->
+	<div id="queryDisplay" class="container">
+	
+	</div>
+    
+  </body>
+</html>

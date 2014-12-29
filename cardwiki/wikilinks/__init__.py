@@ -112,7 +112,7 @@ class WikiLinks(Pattern):
         a = etree.Element('a')
         a.text = display
         a.set('href', '#card_' + label)
-        a.set('onClick', "prependCard(this, \""+url+"\")") 
+        a.set('onClick', "appendCard(this, \""+url+"\")") 
         if html_class:
                 a.set('class', html_class)
         return a

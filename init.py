@@ -1,4 +1,4 @@
-import db
+from cardwiki import db
 import os
 import markdown
 from markdown.extensions.wikilinks import WikiLinkExtension

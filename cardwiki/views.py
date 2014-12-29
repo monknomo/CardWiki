@@ -30,7 +30,7 @@ def get_all_cards():
         filter(and_(db.Card.version == max_v_by_title.c.max_version, 
                         db.Card.title == max_v_by_title.c.title)).all():
         result.append({'title':card.title, 
-                        'link':'cards/' + card.title, 
+                        'linkable_title':card.linkable_title,
                         'current_version':card.max_version})
     return {"cards":result}
     
@@ -219,6 +219,7 @@ def get_cards_for_tag(tag):
     cards = cards.group_by(db.Card.linkable_title)
     cards = cards.having(func.max(db.Card.version))
     result = {"cards":[]}
+    print(cards)
     for card in cards:
         card_dict = card.to_dict()
         card_dict['href'] = '{0}cards/{1}'.format(base_url, card_dict['linkable_title'])

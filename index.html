@@ -167,7 +167,7 @@
 			$("#cancelCardEditButton_"+ this.linkable_title).show();
 			if (editors[this.linkable_title] == null){
 				editors[this.linkable_title] = new EpicEditor({container:"editor_" + this.linkable_title, 
-													basePath:'http://localhost:8080/static',
+													basePath:'/static',
 													autogrow:{minHeight:225, maxHeight:800, scroll:true}});
 				editor = editors[this.linkable_title];
 			}else{
@@ -211,7 +211,7 @@
 			$(".saveCardButton").hide();
 			$("#admin").hide();
 			$("#queryDisplay").hide();
-			$.ajax({url:'http://localhost:8080/cards/__startCard', 
+			$.ajax({url:'/cards/__startCard', 
 					type:'GET', 
 					success: function(data){
                             console.log(data);
@@ -263,7 +263,7 @@
 				newCard.title = linkable_title;
 			}
 			console.log(newCard);
-			$.ajax({url:"http://localhost:8080/cards/"+linkable_title,
+			$.ajax({url:"/cards/"+linkable_title,
 					type:'PUT',
 					contentType:'application/json',
 					data:JSON.stringify(newCard),
@@ -323,7 +323,7 @@
 			if(cards[newCard.substring(7)] != null){
 				console.log("already open, scroll to this sucker?");
 			}else{
-				$.ajax({url:'http://localhost:8080' + newCard, 
+				$.ajax({url:'/' + newCard, 
 						type:'GET', 
 						success: function(data){
                                 var card = new Card(data);
@@ -355,7 +355,7 @@
 			console.log(taggedCard);
 			console.log(tag);
 			var tagResults = {'tags':[{'tag':tag, 'tagged_card':taggedCard}]}
-			$.ajax({url:'http://localhost:8080/cards/' + taggedCard + '/tags',
+			$.ajax({url:'/cards/' + taggedCard + '/tags',
 					type:'PUT',
 					contentType:'application/json',
 					data:JSON.stringify(tagResults),
@@ -368,7 +368,7 @@
 		}
 		
 		function deleteTag(taggedCard, tag){
-			$.ajax({url:"http://localhost:8080/cards/"+taggedCard+"/tags/"+tag,
+			$.ajax({url:"/cards/"+taggedCard+"/tags/"+tag,
 					type:'DELETE',
 					success: function(data){
 								console.log(data);
@@ -383,7 +383,7 @@
 			var tag = evt.data;
 			console.log(tag);
 			//removes &nbsp;&nbsp; from the end
-			$.ajax({url:'http://localhost:8080/tags/'+tag,
+			$.ajax({url:'/tags/'+tag,
 					type:'GET',
 					success: function(data){							
 							console.log(data);
@@ -414,7 +414,7 @@
 			var title = $("#newCardTitleInput").val().replace(new RegExp(" ",'g'), "_");
 			var content = new_card_editor.exportFile();
 			var newCard =  {title:title, content:content, edited_by:null};
-			$.ajax({url:"http://localhost:8080/cards/"+title,
+			$.ajax({url:"/cards/"+title,
 					type:'PUT',
 					contentType:'application/json',
 					data:JSON.stringify(newCard),
@@ -449,7 +449,7 @@
 											"</div>");
 				
 				new_card_editor = new EpicEditor({container:"newCardEditor", 
-														basePath:'http://localhost:8080/static',
+														basePath:'/static',
 														focusOnLoad:true,
 														autogrow:{minHeight:350, maxHeight:false, scroll:true}});
 				
@@ -480,7 +480,7 @@
 			//$("#cardList").hide();
 			//$("#admin").hide();
 			//$("#queryDisplay").show();
-			$.ajax({url:'http://localhost:8080/cards',
+			$.ajax({url:'/cards',
 						type:'GET',
 						success: function(data){
 							console.log(data);

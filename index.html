@@ -323,7 +323,7 @@
 			if(cards[newCard.substring(7)] != null){
 				console.log("already open, scroll to this sucker?");
 			}else{
-				$.ajax({url:'/' + newCard, 
+				$.ajax({url:'' + newCard, 
 						type:'GET', 
 						success: function(data){
                                 var card = new Card(data);

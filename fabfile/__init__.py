@@ -110,7 +110,7 @@ def restart_server():
 	start_server()
 
 def deploy():
-	code_dir = '$HOME'
+	code_dir = '$HOME/CardWiki'
 	stop_server()
 	with settings(warn_only=True):
 		if run("test -d {0}".format(code_dir)).failed:

@@ -7,7 +7,7 @@
     <title>Card Wiki</title>
 
     <!-- Bootstrap -->
-    <link href="static/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
 	<link href="static/css/bootstrap-theme.min.css" rel="stylesheet">
 	<link href="static/css/jquery.tagsinput.css" rel="stylesheet">
 	<link href="static/css/custom.css" rel="stylesheet">
@@ -21,7 +21,7 @@
 	<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
-    <script type="text/javascript" src="static/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
 	<script type="text/javascript" src="static/js/epiceditor.min.js"></script>
 	<script type="text/javascript" src="static/js/validator.min.js"></script>
 	<script type="text/javascript" src="static/js/jquery.tagsinput.js"></script>
@@ -130,7 +130,7 @@
         
         Card.prototype.loadTags = function(){
             var taggedCardTitle = this.linkable_title;
-            $.ajax({url:'http://localhost:8080/cards/' + this.linkable_title + '/tags',
+            $.ajax({url:'/cards/' + this.linkable_title + '/tags',
                     type:'GET',
                     success: function(data){
                         console.log(data);

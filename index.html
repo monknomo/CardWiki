@@ -174,14 +174,14 @@
 				editor = editors[this.linkable_title];
 			}
 			editor.load();
-			$("#editor_"+linkable_title).show();
-			if ( editor.getFiles('cardWiki_'+linkable_title) === undefined){
-				editor.importFile('cardWiki_'+linkable_title,cards[linkable_title].content);
+			$("#editor_"+this.linkable_title).show();
+			if ( editor.getFiles('cardWiki_' + this.linkable_title) === undefined){
+				editor.importFile('cardWiki_' + this.linkable_title,cards[this.linkable_title].content);
 			}else{
-				if( Date.parse(cards[linkable_title].edited_at) > Date.parse(editor.getFiles('cardWiki_'+linkable_title).modified) ){
-					editor.importFile('cardWiki_'+linkable_title,cards[linkable_title].content);
+				if( Date.parse(cards[this.linkable_title].edited_at) > Date.parse(editor.getFiles('cardWiki_' + this.linkable_title).modified) ){
+					editor.importFile('cardWiki_' + this.linkable_title,cards[this.linkable_title].content);
 				}else{
-					editor.open('cardWiki_'+linkable_title);
+					editor.open('cardWiki_' + this.linkable_title);
 				}
 				
 			}

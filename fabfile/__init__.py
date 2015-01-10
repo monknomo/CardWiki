@@ -110,7 +110,7 @@ def restart_server():
 	start_server()
 
 def deploy():
-	code_dir = '$HOME/code'
+	code_dir = '$HOME'
 	stop_server()
 	with settings(warn_only=True):
 		if run("test -d {0}".format(code_dir)).failed:

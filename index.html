@@ -314,8 +314,10 @@
             $("#cardList").show();
 			$("#admin").hide();
 			$("#queryDisplay").hide();
+            console.log("append card")
             console.log(currentCardId);
 			console.log(newCard);
+            console.log(newCard.substring(7));
 			var active_div = $(currentCardId).parents("div.jumbotron")[0];
 			console.log(active_div);
 			var active_title = active_div.id.substring(5);

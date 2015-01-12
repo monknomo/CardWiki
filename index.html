@@ -317,12 +317,12 @@
             console.log("append card")
             console.log(currentCardId);
 			console.log(newCard);
-            console.log(newCard.substring(7));
+            console.log(newCard.substring(7, newCard.length -1));
 			var active_div = $(currentCardId).parents("div.jumbotron")[0];
 			console.log(active_div);
 			var active_title = active_div.id.substring(5);
 			console.log(active_title);
-			if(cards[newCard.substring(7)] != null){
+			if(cards[newCard.substring(7,newCard.length - 1)] != null){
 				console.log("already open, scroll to this sucker?");
 			}else{
 				$.ajax({url:'' + newCard, 

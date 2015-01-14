@@ -85,6 +85,7 @@ class User(Base):
     facebook_id = Column(String(100))
     twitter_id = Column(String(100))
     yahoo_id = Column(String(100))
+    passwordhash = Column(String(100))
 
     repositories = relationship("UserRepository", backref="user")
     bio = relationship("UserBiography", uselist=False, backref="user")

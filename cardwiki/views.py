@@ -6,8 +6,47 @@ import datetime
 import markdown
 from cardwiki.wikilinks import WikiLinkExtension
 import re
+from passlib.hash import pbkdf2_sha256
 
 base_url = "/"
+
+def db_transaction(func):
+    def handle_session(*args, **kwargs):
+        session = db.Session()
+        value = func(*args, **kwargs)
+        session.close()
+        return value
+    return handle_session
+
+def require_authentication(func):
+    def check_auth(*args, **kwargs):
+        session = db.Session()
+        try:
+            username = request.json['username']
+        except:
+            try:
+                password = password.json['password']
+            except:
+                return {"auth_status":"failed",
+                        "requested_url":request.path,
+                        "reason":"We need both a username and password"
+                        }
+            return {"auth_status":"failed",
+                    "requested_url":request.path(),
+                    "reason":"We need a username to go with your password"
+                    }
+        password = request.json['password']            
+        user = session.query(db.User).filter(db.User.username == username).one()
+        session.close()
+        if pbkdf2_sha256.verify(password, passwordhash):
+            value = func(*args, **kwargs)
+            value['auth_status']="success"
+        else:
+            return {"auth_status":"failure",
+                    "requested_url":request.path(),
+                    "reason":"We don't recognize your username with that password"
+                    }
+    return check_auth
 
 @get('{0}'.format(base_url))
 def get_index():
@@ -17,7 +56,7 @@ def get_index():
 def get_static(filename):
     return static_file(filename, root='./static')
 
-@get('{0}cards'.format(base_url))
+@get('{0}cards/'.format(base_url))
 def get_all_cards():
     session = db.Session()
     result = []    
@@ -32,15 +71,16 @@ def get_all_cards():
         result.append({'title':card.title, 
                         'linkable_title':card.linkable_title,
                         'current_version':card.max_version})
+    session.close()
     return {"cards":result}
     
 @get('{0}cards/<linkable_title>'.format(base_url))
-@get('{0}cards/<linkable_title>/'.format(base_url))
 def get_card(linkable_title):
     session = db.Session()
     card_exists = exists().where(db.Card.linkable_title == linkable_title)
     if session.query(db.Card).filter(card_exists).count() > 0:
         newest_card = session.query(db.Card).filter(db.Card.linkable_title == linkable_title).order_by(db.Card.version.desc()).first()
+        session.close()
         """
         wikilinks = []
         for wikilink in newest_card.wikilinks:
@@ -75,12 +115,13 @@ def get_card(linkable_title):
     print(card)
     return card
 
-@get('{0}cards/<title>/wikilinks'.format(base_url))
+@get('{0}cards/<title>/wikilinks/'.format(base_url))
 def get_card_links(title):
     session = db.Session()
     card_exists = exists().where(db.Card.title == title)
     if session.query(db.Card).filter(card_exists).count() > 0:
         newest_card = session.query(db.Card).filter(db.Card.title == title).order_by(db.Card.version.desc()).first()
+        session.close()
         wikilinks = []
         for wikilink in newest_card.wikilinks:
             wikilink_dict = wikilink.to_dict();
@@ -96,6 +137,7 @@ def get_card(title,version):
     card_exists = exists().where(db.Card.title == title)
     if session.query(db.Card).filter(card_exists).count() > 0:
         newest_card = session.query(db.Card).filter(and_(db.Card.title == title, db.Card.version == version)).order_by(db.Card.version.desc()).first()
+        session.close()
         wikilinks = []
         for wikilink in newest_card.wikilinks:
             wikilink_dict = wikilink.to_dict();
@@ -125,7 +167,9 @@ def derive_title_link(title):
     title = re.sub(r'[^a-zA-Z0-9_~\-\.]', '', title)
     return title
     
+
 @put('{0}cards/<linkable_title>'.format(base_url))
+@require_authentication
 def create_card(linkable_title):
     session = db.Session()
     if session.query(db.Card).filter(db.Card.linkable_title==linkable_title).count() > 0:
@@ -148,6 +192,7 @@ def create_card(linkable_title):
                                             from_card_version = new_card.version)
                 session.add(wikilink)
             session.commit()
+            session.close()
             
         else:
             new_card = None;
@@ -166,10 +211,11 @@ def create_card(linkable_title):
     else:
         return new_card.to_dict()
     
-@get('{0}cards/<linkable_title>/tags'.format(base_url))
+@get('{0}cards/<linkable_title>/tags/'.format(base_url))
 def get_card_tags(linkable_title):
     session = db.Session()
     query = session.query(db.CardTag).filter(db.CardTag.tagged_card == linkable_title)
+    session.close()
     results = {"tags":[]}
     for tag in query:
         results["tags"].append({"tag":tag.tag, 
@@ -177,8 +223,9 @@ def get_card_tags(linkable_title):
                                                             tag.tag)})
     return results
     
-@put('{0}cards/<linkable_title>/tags'.format(base_url))
+
 @put('{0}cards/<linkable_title>/tags/'.format(base_url))
+@require_authentication
 def create_card_tags(linkable_title):
     session = db.Session()
     print(request.json['tags'])
@@ -191,21 +238,25 @@ def create_card_tags(linkable_title):
                 if session.query(db.CardTag).filter(db.CardTag.tagged_card == tag["tagged_card"], db.CardTag.tag == split_tag).count() == 0:
                     print("inserting tag")
                     session.add(db.CardTag(tagged_card = tag["tagged_card"], tag = split_tag))
-    session.commit()    
+    session.commit()  
+    session.close()    
     return get_card_tags(linkable_title)
     
+
 @delete('{0}cards/<linkable_title>/tags/<tag>'.format(base_url))
-@delete('{0}cards/<linkable_title>/tags/<tag>/'.format(base_url))
+@require_authentication
 def create_card_tags(linkable_title, tag):
     session = db.Session()
     db_tag = session.query(db.CardTag).filter(db.CardTag.tagged_card == linkable_title, db.CardTag.tag == tag).first()
     session.delete(db_tag)
     session.commit()
+    session.close()
 
-@get('{0}tags'.format(base_url))
+@get('{0}tags/'.format(base_url))
 def get_all_tags():
     session = db.Session()
     q = session.query(db.CardTag.tag, func.count(db.CardTag.tag)).group_by(db.CardTag.tag).all()
+    session.close()
     result = {"tags":[]}
     for tag in q:
         result["tags"].append({"tag":tag[0], "count":tag[1], "href":'{0}tags/{1}'.format(base_url, tag[0].replace(" ", "_"))})
@@ -216,6 +267,7 @@ def get_cards_for_tag(tag):
     session = db.Session()
     tags = session.query(db.CardTag.tagged_card).filter(db.CardTag.tag == tag)
     cards = session.query(db.Card).filter(db.Card.linkable_title.in_(tags))
+    session.close()
     cards = cards.group_by(db.Card.linkable_title)
     cards = cards.having(func.max(db.Card.version))
     result = {"cards":[]}
@@ -226,4 +278,4 @@ def get_cards_for_tag(tag):
         card_dict['wikilinks'] = '{0}cards/{1}/wikilinks'.format(base_url, card_dict['linkable_title'])
         result["cards"].append(card_dict)
     return result
-    
+ 

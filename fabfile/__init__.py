@@ -116,7 +116,8 @@ def deploy():
 		if run("test -d {0}".format(code_dir)).failed:
 			run("git clone https://github.com/monknomo/CardWiki.git {0}".format(code_dir))
 	with cd(code_dir):
-		run("git pull")
+		run("git fetch --all")
+        run("git reset --hard origin/master")
 	start_server()		
 	
 

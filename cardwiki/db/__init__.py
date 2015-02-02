@@ -1,13 +1,29 @@
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text, Sequence, ForeignKey, Date, DateTime, ForeignKeyConstraint
 from sqlalchemy.orm import relationship, sessionmaker
+from passlib.hash import bcrypt
+from contextlib import contextmanager
 
 db_path = "wiki.db"
 
 engine = create_engine('sqlite:///{0}'.format(db_path), echo=True)
-Session = sessionmaker(bind=engine)
+_Session = sessionmaker(bind=engine)
+#Session = sessionmaker
 
 Base = declarative_base()
+
+@contextmanager
+def session_scope():
+    """Provide a transactional scope around a series of operations."""
+    session = _Session()
+    try:
+        yield session
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()
 
 class Card(Base):
     __tablename__ = 'card'
@@ -77,6 +93,15 @@ class CardTag(Base):
         return {"tagged_card":self.tagged_card, "tag":self.tag}
 
 class User(Base):
+
+    def __init__ (self, *args, **kwargs):
+        if kwargs['plainpassword'] is not None:
+            kwargs['passwordhash']=bcrypt.encrypt(kwargs['plainpassword'])
+            kwargs.pop('plainpassword')
+        super( User, self ).__init__(**kwargs)
+        
+        
+    
     __tablename__ = 'user'
     id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
     username = Column(String(50))
@@ -85,22 +110,46 @@ class User(Base):
     facebook_id = Column(String(100))
     twitter_id = Column(String(100))
     yahoo_id = Column(String(100))
-    passwordhash = Column(String(100))
+    passwordhash = Column(String(5000))
+    last_seen = Column(DateTime())  
 
     repositories = relationship("UserRepository", backref="user")
     bio = relationship("UserBiography", uselist=False, backref="user")
     
+    def to_dict_dangerous(self):
+        if self.last_seen is None:
+            last_seen = None
+        else:
+            last_seen = self.last_seen.isoformat()
+        return {"id":self.id,
+                    "username":self.username,
+                    "passwordhash":self.passwordhash,
+                    "google_id":self.google_id,
+                    "github_id":self.github_id,
+                    "facebook_id":self.facebook_id,
+                    "twitter_id":self.twitter_id,
+                    "yahoo_id":self.yahoo_id,
+                    "last_seen":last_seen}
+                    
     def to_dict(self):
+        if self.last_seen is None:
+            last_seen = None
+        else:
+            last_seen = self.last_seen.isoformat()
         return {"id":self.id,
                     "username":self.username,
                     "google_id":self.google_id,
                     "github_id":self.github_id,
                     "facebook_id":self.facebook_id,
                     "twitter_id":self.twitter_id,
-                    "yahoo_id":self.yahoo_id}
+                    "yahoo_id":self.yahoo_id,
+                    "last_seen":last_seen}
+                    
     
     def __repr__(self):
         return """<User(username='{0}', 
+                    passwordhash='{6}',
+                    salt='{7}',
                     google_id='{1}', 
                     github_id='{2}', 
                     facebook_id='{3}', 
@@ -110,7 +159,9 @@ class User(Base):
                                                 self.github_id, 
                                                 self.facebook_id, 
                                                 self.twitter_id, 
-                                                self.yahoo_id)
+                                                self.yahoo_id,
+                                                self.passwordhash,
+                                                self.salt)
 								
 class UserRepository(Base):
     __tablename__ = 'user_repository'

@@ -38,8 +38,9 @@
         
 
         $.fn.goTo = function() {
+                        console.log($(this).offset().top - '70px');
                         $('html, body').animate({
-                            scrollTop: $(this).offset().top + '70px'
+                            scrollTop: $(this).offset().top - '70px'
                         }, 'fast');
                         return this; // for chaining...
                     }
@@ -113,9 +114,13 @@
         };
         
         Card.prototype.viewMode = function(){
+        $("#content_"+ this.linkable_title).html(this.rendered_content);
             $('#saveButton_'+this.linkable_title).hide();
             $('#cancelCardEditButton_'+this.linkable_title).hide();
             $('#titleEditor_'+this.linkable_title).hide();
+            $("#title_"+ this.linkable_title).show();
+			$("#content_"+ this.linkable_title).show();
+			$("#editButton_"+ this.linkable_title).show();
             $('#card_'+this.linkable_title).goTo();
             console.log(this.linkable_title);
             var taggedCardTitle = this.linkable_title;
@@ -130,7 +135,7 @@
         
         Card.prototype.loadTags = function(){
             var taggedCardTitle = this.linkable_title;
-            $.ajax({url:'/cards/' + this.linkable_title + '/tags',
+            $.ajax({url:'/cards/' + this.linkable_title + '/tags/',
                     type:'GET',
                     success: function(data){
                         console.log(data);
@@ -187,9 +192,61 @@
 			}
         };
         
+        //Card.prototype.save = function(){            
+		//	var editor = editors[this.linkable_title];
+		//	editor.save();
+		//	var content = editor.exportFile('cardWiki_'+this.linkable_title);			
+			//newCard = {linkable_title:linkable_title, content:content, edited_by:username};
+			//if($("#titleEditorInput_"+linkable_title)[0]){
+			//	newCard.title = $("#titleEditorInput_"+linkable_title)[0].value;
+			//}else{
+			//	newCard.title = linkable_title;
+			//}			
+        //    if(username!=null){
+        //        this.username=username;
+        //        this.password=password;
+        //        this.edited_by=username;
+        //    }
+        //    console.log(this);
+         //   console.log(JSON.stringify(this));
+		//	$.ajax({url:"/cards/"+this.linkable_title,
+		//			type:'PUT',
+		//			contentType:'application/json',
+		//			data:JSON.stringify(this),
+		//			success: function(data){
+        //                        console.log("success saving card");
+		//						console.log(data);
+         //                       if(data.authentication_status == "success"){
+         //                           $("#editButton_"+this.linkable_title).show();
+        //                            $("#saveButton_"+this.linkable_title).hide();
+        //                            $("#cancelCardEditButton_"+this.linkable_title).hide();
+         //                           cards[this.linkable_title] = new Card(data);
+        //                            $("#content_"+this.linkable_title).html(data.rendered_content);
+         //                           if(data.linkable_title.slice(0,2) == "__"){
+        //                                //do nothing
+        //                            }else{
+        //                                $("#title_"+this.linkable_title).html("<h1>" + data.title + "</h1>");
+        //                            }
+        //                            editor.unload(function(){
+        //                                $("#content_"+this.linkable_title).show();
+        //                                $("#editor_"+this.linkable_title).hide();
+         //                               $("#titleEditor_"+this.linkable_title).hide();
+        //                                $("#title_"+this.linkable_title).show();
+        //                                editors[this.linkable_title] = null;
+        //                            });
+        //                            cards[this.linkable_title].viewMode();
+		//						} else {
+        //                            openAndGotoLogin(data.requested_url)
+        //                        }
+		//					}
+		//			});
+        //}
+        
 		cards = {};
 		editors = {};
 		new_card_editor = null;
+        username=null;
+        password=null;
 		
 		$(function() {
 		  $('a[href*=#]:not([href=#])').click(function() {
@@ -208,6 +265,7 @@
 		});
 						
 		function init(){
+            
 			$(".saveCardButton").hide();
 			$("#admin").hide();
 			$("#queryDisplay").hide();
@@ -250,49 +308,57 @@
 			populateEditor(title);			
 		}
 		
-		function saveCard(obj){
-			
+		function saveCard(obj){			
 			var linkable_title = obj.id.substring(11);
-			var editor = editors[linkable_title];
-			editor.save();
-			var content = editor.exportFile('cardWiki_'+linkable_title);			
-			newCard = {linkable_title:linkable_title, content:content, edited_by:null};
-			if($("#titleEditorInput_"+linkable_title)[0]){
-				newCard.title = $("#titleEditorInput_"+linkable_title)[0].value;
-			}else{
-				newCard.title = linkable_title;
-			}
-			console.log(newCard);
-			$.ajax({url:"/cards/"+linkable_title,
-					type:'PUT',
-					contentType:'application/json',
-					data:JSON.stringify(newCard),
-					success: function(data){
-								console.log(data);
-								$("#editButton_"+linkable_title).show();
-								$("#saveButton_"+linkable_title).hide();
-								$("#cancelCardEditButton_"+linkable_title).hide();
-								cards[data.linkable_title] = new Card(data);
-								$("#content_"+linkable_title).html(data.rendered_content);
-								if(data.linkable_title.slice(0,2) == "__"){
-									//do nothing
-								}else{
-									$("#title_"+linkable_title).html("<h1>" + data.title + "</h1>");
-								}
-								editor.unload(function(){
-									$("#content_"+linkable_title).show();
-									$("#editor_"+linkable_title).hide();
-									//$("#tagEditor_"+linkable_title).hide();
-									$("#titleEditor_"+linkable_title).hide();
-									$("#title_"+linkable_title).show();
-									//$("#tags_"+linkable_title).show();
-									editors[linkable_title] = null;
-								});
-								
-							}
-					});
+			cards[linkable_title].save();
 		}	
 		
+        function openAndGotoLogin(requested_url){
+            var loginDialog = "<div class='jumbotron login_dialog' id='login_dialog'>" +
+                                    "<div class='card_title_holder'>" +
+                                        "<h1>Login</h1>" +
+                                    "</div>" +
+                                    "<form id='login_form'>" +
+                                        "<div style='height:1em;width:100%;clear:both;'></div>"+	
+                                        "<div class='input-group'>" +
+                                            "<label class='sr-only' id='login_username_label'>Username</label>" +
+                                            "<input type='text' id='loginUsername' class='form-control' placeholder='username' aria-labeledby='login_username_label'>" +
+                                        "</div>" +
+                                        "<div style='height:1em;width:100%;clear:both;'></div>"+	
+                                        "<div class='input-group'>" +
+                                            "<label class='sr-only' id='login_password_label'>Password</label>" +
+                                            "<input type='password' id='loginPassword' class='form-control' placeholder='password' aria-labeledby='login_password_label'>" +
+                                        "</div>" +
+                                        "<div style='height:1em;width:100%;clear:both;'></div>"+	
+                                        "<div>" +
+                                            "<input class='btn btn-success btn-lg' type='submit' value='Login' role='button' onclick='clickLogin()'/>" +
+                                            "<a class='btn btn-sm' role='button' onclick='$('#login_dialog').remove()'>cancel</a>" +
+                                        "</div>" + 
+                                    "</form>" +
+                                "</div>";
+     
+            $('html, body').animate({scrollTop: $("#cardList").offset().top - '70em'}, 'fast');
+            $("#cardList").prepend(loginDialog);
+            $("#login_form").submit(function(event){event.preventDefault();});
+        }
+        
+        function clickLogin(){
+            var postData = {'username': $("#loginUsername").val(), 'password':$("#loginPassword").val()}
+           $.ajax({url:'login/', 
+                    type:'POST',
+					contentType:'application/json',
+					data:JSON.stringify(postData),
+                    'success':function(data){
+                                                console.log(data)
+                                                if(data.authentication_status = "success"){                                                    
+                                                    username=$("#loginUsername").val();
+                                                    password=$("#loginPassword").val();
+                                                    $('#login_dialog').remove();
+                                                }
+                                            } 
+                    });
+        }
+        
 		function cancelEdit(obj){
 			var title = obj.id.substring(21);
 			var editor = editors[title];
@@ -335,6 +401,7 @@
 									$("#"+active_div.id).after(card.getHtml());
                                     card.loadTags();
 									openEditor($("#editButton_"+data.linkable_title)[0]);
+                                    console.log($('#card_'+data.linkable_title).offset().top - 70);
 									$('html,documentElement').animate({
 									  scrollTop: $('#card_'+data.linkable_title).offset().top - 70
 									}, 100 );
@@ -349,6 +416,7 @@
 			}
 		}
 		
+        
 		//card = function(linkable_title, title, content, tags){
 		//
 		//};
@@ -357,7 +425,7 @@
 			console.log(taggedCard);
 			console.log(tag);
 			var tagResults = {'tags':[{'tag':tag, 'tagged_card':taggedCard}]}
-			$.ajax({url:'/cards/' + taggedCard + '/tags',
+			$.ajax({url:'/cards/' + taggedCard + '/tags/',
 					type:'PUT',
 					contentType:'application/json',
 					data:JSON.stringify(tagResults),
@@ -464,6 +532,58 @@
 									  scrollTop: -70
 									}, 1000);
 			}
+		}
+        
+        function saveCard(obj){			
+			var linkable_title = obj.id.substring(11);
+			var editor = editors[linkable_title];
+			editor.save();
+			var content = editor.exportFile('cardWiki_'+linkable_title);			
+			newCard = {linkable_title:linkable_title, content:content, edited_by:username};
+			if($("#titleEditorInput_"+linkable_title)[0]){
+				newCard.title = $("#titleEditorInput_"+linkable_title)[0].value;
+			}else{
+				newCard.title = linkable_title;
+			}
+			console.log(newCard);
+            if(username!=null){
+                newCard.username=username;
+                newCard.password=password;
+                newCard.edited_by=username;
+            }
+			$.ajax({url:"/cards/"+linkable_title,
+					type:'PUT',
+					contentType:'application/json',
+					data:JSON.stringify(newCard),
+					success: function(data){
+								console.log(data);
+                                if(data.authentication_status == "success"){
+								$("#editButton_"+linkable_title).show();
+								$("#saveButton_"+linkable_title).hide();
+								$("#cancelCardEditButton_"+linkable_title).hide();
+								cards[data.linkable_title] = new Card(data);
+								$("#content_"+linkable_title).html(data.rendered_content);
+                                console.log(data);
+								if(data.linkable_title.slice(0,2) == "__"){
+									//do nothing
+								}else{
+									$("#title_"+linkable_title).html("<h1>" + data.title + "</h1>");
+								}
+								editor.unload(function(){
+									$("#content_"+linkable_title).show();
+									$("#editor_"+linkable_title).hide();
+									//$("#tagEditor_"+linkable_title).hide();
+									$("#titleEditor_"+linkable_title).hide();
+									$("#title_"+linkable_title).show();
+									//$("#tags_"+linkable_title).show();
+									editors[linkable_title] = null;
+								});
+                                } else {
+                                    openAndGotoLogin(data.requested_url)
+                                }
+								
+							}
+					});
 		}
 		
 		function openAdmin(){

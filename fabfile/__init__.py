@@ -89,8 +89,8 @@ def stop_server():
         if not run("test -e {0}/gunicorn.pid".format(server_dir)).failed:
             stop_server = True          
     if stop_server:
-        run("cat $HOME/gunicorn.pid")
-        run("kill $(cat {0}/gunicorn.pid) && rm {0}/gunicorn.pid".format(server_dir))
+        print(run("cat $HOME/gunicorn.pid"))
+        print(run("kill $(cat {0}/gunicorn.pid) && rm {0}/gunicorn.pid".format(server_dir)))
     else:
         print("gunicorn pid missing, a human will have to take this")
                         

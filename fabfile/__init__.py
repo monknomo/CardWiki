@@ -52,6 +52,7 @@ def prepare_virtualenv():
 			run("pyenv virtualenv {0} {1}".format(python_version, virtualenv_name))
 	#pyenv activate {0}.format(virtualenv_name)
 	run("pyenv activate {0} && pip install bottle".format(virtualenv_name))
+    run("pyenv activate {0} && pip install passlib".format(virtualenv_name))
 	run("pyenv activate {0} && pip install sqlalchemy".format(virtualenv_name))
 	run("pyenv activate {0} && pip install markdown".format(virtualenv_name))
 

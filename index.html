@@ -10,7 +10,6 @@
     <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css" rel="stylesheet">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.2/css/bootstrap-theme.min.css">
 	<link href="static/css/jquery.tagsinput.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css" rel="stylesheet">
 	<link href="static/css/custom.css" rel="stylesheet">
     <!-- HTML5 Shim and Respond.js IE8 support of HTML5 elements and media queries -->
     <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -23,9 +22,9 @@
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <!-- Include all compiled plugins (below), or include individual files as needed -->
     <script type="text/javascript" src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/js/bootstrap.min.js"></script>
-	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/js/epiceditor.js"></script>
+	<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/js/epiceditor.min.js"></script>
 	<script type="text/javascript" src="static/js/validator.min.js"></script>
-	<script type="text/javascript" src="static/js/jquery.tagsinput.js"></script>
+    <script type="text/javascript" src="static/js/jquery.tagsinput.js"></script>
 	<script>
 		String.prototype.format = String.prototype.f = function() {
                                                             var s = this,
@@ -174,7 +173,10 @@
 			if (editors[this.linkable_title] == null){
 				editors[this.linkable_title] = new EpicEditor({container:"editor_" + this.linkable_title, 
 													basePath:'/static',
-													autogrow:{minHeight:225, maxHeight:800, scroll:true}});
+													autogrow:{minHeight:225, maxHeight:800, scroll:true},
+                                                    theme: {base: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css',
+                                                    preview: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css',
+                                                    editor: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css'}});
 				editor = editors[this.linkable_title];
 			}else{
 				editor = editors[this.linkable_title];

@@ -1,18 +1,12 @@
 '''
 WikiLinks Extension for Python-Markdown
 ======================================
-
 Converts [[WikiLinks]] to relative links.
-
 See <https://pythonhosted.org/Markdown/extensions/wikilinks.html> 
 for documentation.
-
 Original code Copyright [Waylan Limberg](http://achinghead.com/).
-
 All changes Copyright The Python Markdown Project
-
 License: [BSD](http://www.opensource.org/licenses/bsd-license.php) 
-
 '''
 
 from __future__ import absolute_import

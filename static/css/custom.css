@@ -14,3 +14,11 @@ div.card_title_holder {
 a.externalLink{
     text-decoration: underline;
 }
+
+span.card_title{
+    display: block;
+}
+
+span.cardTitleEditor{
+    display:inline;
+}

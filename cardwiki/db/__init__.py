@@ -1,21 +1,29 @@
+"""
+Database objects and access definitions for cardwiki
+"""
+
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text, Sequence, ForeignKey, Date, DateTime, ForeignKeyConstraint
-from sqlalchemy.orm import relationship, sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text
+from sqlalchemy import Sequence, ForeignKey, Date, DateTime
+from sqlalchemy import ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy.orm import relationship, sessionmaker, backref, configure_mappers
+from sqlalchemy_continuum import make_versioned, version_class
 from passlib.hash import bcrypt
 from contextlib import contextmanager
+import datetime as dt
+import re
 
-db_path = "wiki.db"
+make_versioned(user_cls=None)
 
-engine = create_engine('sqlite:///{0}'.format(db_path), echo=True)
-_Session = sessionmaker(bind=engine)
-#Session = sessionmaker
-
-Base = declarative_base()
+DB_PATH = "wiki.db"
+ENGINE = create_engine('sqlite:///{0}'.format(DB_PATH), echo=False)
+BASE = declarative_base()
 
 @contextmanager
 def session_scope():
     """Provide a transactional scope around a series of operations."""
-    session = _Session()
+
+    session = sessionmaker(bind=ENGINE)()
     try:
         yield session
         session.commit()
@@ -25,164 +33,145 @@ def session_scope():
     finally:
         session.close()
 
-class Card(Base):
+def derive_title_link(title):
+    """Derives a title sutiable for linking to"""
+    title = re.sub(r'[\ ]', '_', title)
+    title = re.sub(r'[^a-zA-Z0-9_~\-\.]', '', title)
+    return title
+
+class Card(BASE):
+    """A Card object for persistence"""
+    __versioned__ = {}
     __tablename__ = 'card'
-    linkable_title = Column(String(200), primary_key=True)    
-    version = Column(Integer, primary_key=True)
-    title = Column(String(200), nullable=False)
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    display_title = Column(String(200), nullable=False)
+    link = Column(String(200), nullable=False)
     content = Column(Text())
     rendered_content = Column(Text())
-    edited_at = Column(DateTime())    
-    edited_by = Column(Integer, ForeignKey('user.id'))
-    previous_title = Column(String(200))
-    next_title = Column(String(200))
-    wikilinks = relationship("CardWikiLink", backref="card", primaryjoin='and_(Card.title==CardWikiLink.from_card, Card.version == CardWikiLink.from_card_version)')
+    edited_at = Column(DateTime(), default=dt.datetime.utcnow())
+    edited_by = Column(Integer, ForeignKey('user.id'), nullable=False)
     tags = relationship("CardTag", backref="card")
-    
+
+
+
     def __repr__(self):
-        return "<Card(linkable_title={0}, title={1}, version={2}, "\
-                "content={3}, rendered_content={4}, edited_at={5}, "\
-                "edited_by={6})>".format(self.linkable_title, 
-                                            self.title,
-                                            self.version, 
-                                            self.content, 
-                                            self.rendered_content,
-                                            self.edited_at, 
-                                            self.edited_by)
-    
+        """returns a repr of this Card"""
+        return "<Card(id={0}, display_title={1}, link={2}, content={3}, "\
+               "rendered_content={4}, edited_at={5}, "\
+               "edited_by={6})>".format(self.id,
+                                        self.display_title,
+                                        self.link,
+                                        self.content,
+                                        self.rendered_content,
+                                        self.edited_at,
+                                        self.edited_by)
+
     def to_dict(self):
-        if self.edited_at is None:
-            edited_at = None
-        else:
-            edited_at = self.edited_at.isoformat()
-        return {"title":self.title, 
-                "linkable_title":self.linkable_title,
-                "version":self.version,
+        """returns a dictionary of this card, suitable for json serializing"""
+        return {"id":self.id,
+                "display_title":self.display_title,
+                "link":self.link,
                 "content":self.content,
                 "rendered_content":self.rendered_content,
-                "edited_at":edited_at,
+                "edited_at":self.edited_at.isoformat(),
                 "edited_by":self.edited_by}
+
+
                 
-class CardWikiLink(Base):
-    __tablename__ = 'card_wikilink'
-    from_card = Column(String(200), ForeignKey('card.linkable_title'), primary_key=True)
-    from_card_version = Column(Integer, ForeignKey('card.version'), primary_key=True)
-    to_card = Column(String(200), ForeignKey('card.linkable_title'), primary_key=True)
-    
-    ForeignKeyConstraint(['from_card', 'from_card_version'], ['Card.linkable_title', 'Card.version'])
-    
-    def __repr__(self):
-        return '<CardWikiLink(card_title={0}, '\
-                'link={1})>'.format(self.from_card,
-                                    self.to_card)
-    def to_dict(self):
-        return {"from_card":self.from_card,
-                "from_card_version":self.from_card_version,
-                "to_card":self.to_card}
-    
-class CardTag(Base):
+class CardTag(BASE):
+    """An object for relating tags to Cards, and persisting that relationship"""
     __tablename__ = 'card_tag'
-    tagged_card = Column(String(200), ForeignKey('card.linkable_title'), primary_key=True)
+    tagged_card = Column(Integer,
+                         ForeignKey('card.id'),
+                         primary_key=True)
     tag = Column(String, primary_key=True)
-    
+
     def __repr__(self):
-        return "<CardTag(tagged_card={0}, tag={1})>".format(self.tagged_card, 
-                                                                self.tag)
-    
+        """returns a repr of this CardTag"""
+        return "<CardTag(tagged_card={0}, tag={1})>".format(self.tagged_card,
+                                                            self.tag)
+
     def to_dict(self):
+        """return a dictionary of this CardTag suitable for serializing to json"""
         return {"tagged_card":self.tagged_card, "tag":self.tag}
 
-class User(Base):
+class User(BASE):
+    """An object for persisting users"""
 
-    def __init__ (self, *args, **kwargs):
-        if kwargs['plainpassword'] is not None:
-            kwargs['passwordhash']=bcrypt.encrypt(kwargs['plainpassword'])
-            kwargs.pop('plainpassword')
-        super( User, self ).__init__(**kwargs)
-        
-        
-    
     __tablename__ = 'user'
     id = Column(Integer, Sequence('user_id_seq'), primary_key=True)
-    username = Column(String(50))
+    username = Column(String(254))
     google_id = Column(String(100))
     github_id = Column(String(100))
     facebook_id = Column(String(100))
     twitter_id = Column(String(100))
     yahoo_id = Column(String(100))
     passwordhash = Column(String(5000))
-    last_seen = Column(DateTime())  
-
-    repositories = relationship("UserRepository", backref="user")
+    last_seen = Column(DateTime(), default=dt.datetime.utcnow())
     bio = relationship("UserBiography", uselist=False, backref="user")
-    
+    cards = relationship("Card", backref="card")
+
+    def __init__(self, **kwargs):
+        """A custom init method that allows passing in of plaintext passords
+            to ensure that they are hashed with the preferred bcrypt algorithm"""
+        if kwargs['plainpassword'] is not None:
+            kwargs['passwordhash'] = bcrypt.encrypt(kwargs['plainpassword'])
+            kwargs.pop('plainpassword')
+        super(User, self).__init__(**kwargs)
+
     def to_dict_dangerous(self):
+        """returns a dictionary of this User, suitable for serializing to json.
+        Dangerous because it includes the password hash.  Don't just give this back"""
         if self.last_seen is None:
             last_seen = None
         else:
             last_seen = self.last_seen.isoformat()
         return {"id":self.id,
-                    "username":self.username,
-                    "passwordhash":self.passwordhash,
-                    "google_id":self.google_id,
-                    "github_id":self.github_id,
-                    "facebook_id":self.facebook_id,
-                    "twitter_id":self.twitter_id,
-                    "yahoo_id":self.yahoo_id,
-                    "last_seen":last_seen}
-                    
+                "username":self.username,
+                "passwordhash":self.passwordhash,
+                "google_id":self.google_id,
+                "github_id":self.github_id,
+                "facebook_id":self.facebook_id,
+                "twitter_id":self.twitter_id,
+                "yahoo_id":self.yahoo_id,
+                "last_seen":last_seen}
+
     def to_dict(self):
+        """Returns a dictionary of this User, suitable for serializing to json.
+        No password included, safe to pass around"""
         if self.last_seen is None:
             last_seen = None
         else:
             last_seen = self.last_seen.isoformat()
         return {"id":self.id,
-                    "username":self.username,
-                    "google_id":self.google_id,
-                    "github_id":self.github_id,
-                    "facebook_id":self.facebook_id,
-                    "twitter_id":self.twitter_id,
-                    "yahoo_id":self.yahoo_id,
-                    "last_seen":last_seen}
-                    
-    
+                "username":self.username,
+                "google_id":self.google_id,
+                "github_id":self.github_id,
+                "facebook_id":self.facebook_id,
+                "twitter_id":self.twitter_id,
+                "yahoo_id":self.yahoo_id,
+                "last_seen":last_seen}
+
+
     def __repr__(self):
-        return """<User(username='{0}', 
+        """Returns a repr of this User"""
+        return """<User(username='{0}',
                     passwordhash='{6}',
-                    salt='{7}',
-                    google_id='{1}', 
-                    github_id='{2}', 
-                    facebook_id='{3}', 
-                    twitter_id='{4}', 
-                    yahoo_id='{5}')>""".format(self.username, 
-                                                self.google_id, 
-                                                self.github_id, 
-                                                self.facebook_id, 
-                                                self.twitter_id, 
-                                                self.yahoo_id,
-                                                self.passwordhash,
-                                                self.salt)
-								
-class UserRepository(Base):
-    __tablename__ = 'user_repository'
-    id = Column(Integer, Sequence('user_repository_seq'), primary_key=True)
-    user_id = Column(Integer, ForeignKey('user.id'))
-    name = Column(String(1000))
-    is_website = Column(Boolean())
-    
-    def to_dict(self):
-        return {"id":self.id,
-                "user_id":self.user_id,
-                "name":self.name,
-                "is_website":self.is_website}
-    
-    def __repr__(self):
-        return "<UserRepository(user_id='{0}', name='{1}', "\
-                "is_website='{2}')>".format(self.user_id, 
-                                            self.name, 
-                                            self.is_website)
-        
-class UserBiography(Base):
+                    google_id='{1}',
+                    github_id='{2}',
+                    facebook_id='{3}',
+                    twitter_id='{4}',
+                    yahoo_id='{5}')>""".format(self.username,
+                                               self.google_id,
+                                               self.github_id,
+                                               self.facebook_id,
+                                               self.twitter_id,
+                                               self.yahoo_id,
+                                               self.passwordhash)
+
+class UserBiography(BASE):
+    """An object to allow users to persist a little something about themselves"""
     __tablename__ = 'user_biography'
     user_id = Column(Integer, ForeignKey('user.id'), primary_key=True)
     name = Column(String(500))
@@ -192,8 +181,10 @@ class UserBiography(Base):
     phone = Column(String(20))
     backup_phone = Column(String(20))
     bio = Column(String(2000))
-    
+
     def to_dict(self):
+        """returns a dictionary representation of this UserBiography suitable
+        for serializing to json"""
         return {"user_id":self.user_id,
                 "name":self.name,
                 "birthday":self.birthday.isoformat(),
@@ -202,15 +193,31 @@ class UserBiography(Base):
                 "phone":self.phone,
                 "backup_phone":self.backup_phone,
                 "bio":self.bio}
-    
+
     def __repr__(self):
+        """returns a repr for this UserBiography"""
         return "<UserBiography(user_id='{0}', name='{1}', birthday='{2}', "\
                 "email='{3}', backup_email='{4}', phone='{5}', "\
                 "backup_phone='{6}', bio='{7}')>".format(self.user_id,
-                                                            self.name,
-                                                            self.birthday,
-                                                            self.email,
-                                                            self.backup_email,
-                                                            self.phone,
-                                                            self.backup_phone,
-                                                            self.bio)
+                                                         self.name,
+                                                         self.birthday,
+                                                         self.email,
+                                                         self.backup_email,
+                                                         self.phone,
+                                                         self.backup_phone,
+                                                         self.bio)
+                                                         
+
+configure_mappers()
+CardVersion = version_class(Card)
+
+def _card_version_to_dict(class_):
+    return {"id":class_.id,
+                "display_title":class_.display_title,
+                "link":class_.link,
+                "content":class_.content,
+                "rendered_content":class_.rendered_content,
+                "edited_at":class_.edited_at.isoformat(),
+                "edited_by":class_.edited_by}
+
+CardVersion.to_dict = _card_version_to_dict

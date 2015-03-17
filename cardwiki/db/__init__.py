@@ -7,7 +7,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Boolean, Text
 from sqlalchemy import Sequence, ForeignKey, Date, DateTime
 from sqlalchemy import ForeignKeyConstraint, UniqueConstraint
 from sqlalchemy.orm import relationship, sessionmaker, backref, configure_mappers
-from sqlalchemy_continuum import make_versioned, version_class
+from sqlalchemy_continuum import make_versioned, version_class, transaction_class
 from passlib.hash import bcrypt
 from contextlib import contextmanager
 import datetime as dt
@@ -210,6 +210,9 @@ class UserBiography(BASE):
 
 configure_mappers()
 CardVersion = version_class(Card)
+print("%%%%%%%%%%%%%%%%"+str(Card.__versioned__))
+CardTransaction = transaction_class(Card)
+
 
 def _card_version_to_dict(class_):
     return {"id":class_.id,

@@ -7,6 +7,7 @@ import json
 import datetime
 import markdown
 from cardwiki.wikilinks import WikiLinkExtension
+from cardwiki import Card
 import re
 from passlib.hash import bcrypt
 
@@ -84,18 +85,21 @@ def get_card(linkable_title):
         result = cardwiki.get_newest_card(linkable_title, session)
         if result is None or result == {}:
             request.status = 404
-            return {"status":"failure","reason":"Card {0} not found".format(linkable_title)}
+            return {"status":"failure","reason":"Card '{0}' not found".format(linkable_title)}
         return result
         
 @get('{0}cards/<linkable_title>/<version:int>'.format(base_url))
 def get_card_version( linkable_title,version):
     with session_scope() as session:
-        return cardwiki.get_card_version(linkable_title, version, session)
+        try:
+            return cardwiki.get_card_version(linkable_title, version, session)
+        except cardwiki.CardNotFoundException as cardNotFound:
+            return {"status":"failure","reason":"No version {1} found for card '{0}'".format(linkable_title, version)}
 
 @put('{0}cards/<linkable_title>'.format(base_url))
 #@require_authentication
 def create_card(linkable_title):
-    card = cardwiki.request_to_carddict(request)
+    card = Card(json_dict=request.json)
     if linkable_title is not card['link']:
         request.status = 400
         return {"status":"failure", "reason":"resource uri does not match link in request"}
@@ -129,7 +133,11 @@ def create_card_tags(linkable_title):
             return {"status":"failure", "reason":"Tag {{'tag': '{0}', 'tagged_card': '{1}'}} does not belong to card {2}".format(tag['tag'], tag['tagged_card'], linkable_title)
             }
     with session_scope() as session:
-        cardwiki.insert_tags(request.json['tags'], session)
+        try:
+            cardwiki.insert_tags(request.json['tags'], session)
+        except cardwiki.CardNotFoundException:
+            return {'reason': "Card '{0}' does not exist".format(linkable_title),
+                    'status': 'failure'}
     with session_scope() as session: 
         return cardwiki.get_tags_for_card(linkable_title, session)
         

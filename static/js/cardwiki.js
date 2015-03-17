@@ -84,7 +84,17 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
                     console.log(data);
                     that.cards[link] = "error";
                     if(data.status == 404){
-                        $(currentCardId + " > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
+                        //$(currentCardId + " > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
+                        var card = new Card({link:link,
+                                                title:link.replace("_"," "),
+                                                content:"",
+                                                rendered_content:""});
+                        that.cards[card.link] = card;
+                        if(currentCardId)
+                            $(currentCardId).after(card.getHtml());
+                        else
+                            $("#cardList").html(card.getHtml());
+                        card.editMode(); 
                     }else{
                         $(currentCardId + " > div.announcements").html("<p><b>The server fell over, try again in a bit.  Give it room to breathe!!</b></p>");
                     }

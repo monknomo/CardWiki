@@ -13,14 +13,110 @@ import cardwiki.db as db
 import re
 import datetime
 import copy
+import collections
 
 BASE_URL = "/"
 
+class InvalidKeyException(Exception):
+    def __init__(self, value):
+        self.value = value
+        
+    def __str__(self):
+        return repr(self.value)
+
+class UndeletableAttributeException(Exception):
+    def __init__(self, value):
+        self.value = value
+        
+    def __str__(self):
+        return repr(self.value)
+        
+class Card(collections.UserDict):
+    _keys = ['link','display_title','version','content','rendered_content','edited_by']
+    
+    def __init__(self, link="", display_title="", version=None, content="", rendered_content="", edited_by=None, json_dict=None):
+        collections.UserDict.__init__(self)
+        if json_dict:
+            formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
+            rendered_content = markdown.markdown(json_dict['content'], formatted_url)
+            try:
+                version = json_dict['version']
+                if version:
+                    version = int(version)
+                self.data = {'link': json_dict['link'],
+                             'display_title': json_dict['display_title'].strip(),
+                             'version': version,
+                             'content': json_dict['content'],
+                             'rendered_content': rendered_content,
+                             'edited_by': json_dict['edited_by']}
+            except KeyError as keyerror:
+                self.data = {'link': json_dict['link'],
+                             'display_title': json_dict['display_title'].strip(),
+                             'version': 1,
+                             'content': json_dict['content'],
+                             'rendered_content': rendered_content,
+                             'edited_by': json_dict['edited_by']}
+        else:
+            if display_title and not link:
+                link = self.derive_title_link(display_title)
+            if content and not rendered_content:
+                formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
+                rendered_content = markdown.markdown(json_dict['content'], formatted_url)
+            if version:
+                version = int(version)
+            self.data = {"link":link,
+                         "display_title":display_title,
+                         "version":version,
+                         "content":content,
+                         "rendered_content":rendered_content,
+                         "edited_by":edited_by}
+    
+    def __getattr__(self, name):
+        if name is 'data':
+            return self.data
+        return self.data[name]
+    
+    def __setattr__(self, name, value):
+        if name in self._keys:
+            self.__dict__['data'][name] = value
+        elif name is 'data':
+            self.__dict__[name] = value
+        else:
+            raise InvalidKeyException("{0} is not an acceptable key/attribute of a Card".format(name))
+    
+    def __delattr__(self, name):
+        raise UndeletableAttributeException("Card does not allow attribute deletion")
+    
+    @staticmethod
+    def derive_title_link(title):
+        """Returns a cardwiki-style link; replaces spaces with underscores and non-html
+            safe characters with an empty string.
+
+        Args:
+            title (str): A title of  a card
+
+        Returns:
+            str: A modified title, substituting underscores for spaces and removing
+            non-html friendly characters
+        """
+        title = re.sub(r'[\ ]', '_', title)
+        title = re.sub(r'[^a-zA-Z0-9_~\-\.]', '', title)
+        return title
+        
 class CardNotFoundException(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
         return repr(self.value)
+
+def _delete_card_versions(session):
+    """Deletes everything in card_version, except whatever has id 1 and 
+    everything in card_transaction, except whatever has id 1.  __startCard is 
+    supposed to correspond to the ids.  This is meant to be a convenience method
+    for testing.  You really shouldn't run this in production    
+    """
+    session.query(db.CardVersion).filter(db.CardVersion.id!=1).delete()
+    session.query(db.CardTransaction).filter(db.CardTransaction.id != 1).delete()
         
 def get_cards(session):
     """Returns a list of cards in the database
@@ -39,20 +135,7 @@ def get_cards(session):
                        'current_version':len(card.versions.all())})
     return result
 
-def derive_title_link(title):
-    """Returns a cardwiki-style link; replaces spaces with underscores and non-html
-        safe characters with an empty string.
 
-    Args:
-        title (str): A title of  a card
-
-    Returns:
-        str: A modified title, substituting underscores for spaces and removing
-        non-html friendly characters
-    """
-    title = re.sub(r'[\ ]', '_', title)
-    title = re.sub(r'[^a-zA-Z0-9_~\-\.]', '', title)
-    return title
 
 def get_newest_card(link, session):
     """Returns a dictionary representing the newest card for a given link
@@ -72,12 +155,22 @@ def get_newest_card(link, session):
         return None
 
 def get_card_version(link, version, session):
-    cards = session.query(db.Card).filter(db.Card.link == link).one()
     try:
+        cards = session.query(db.Card).filter(db.Card.link == link).one()
+    except SqlAlchemyNoResultFound:
+        raise CardNotFoundException("Card {0} not found while looking for version {1}".format(link, version))
+    try:
+        if version < 0 or version > cards.versions.count():
+            raise CardNotFoundException("No version {0} found for card {1}".format(version, link))
         card = cards.versions[version-1]
         value = card.to_dict()
         value = copy.deepcopy(value)
         value['version'] = version
+        if cards.versions.count() == version:
+            next_version = None
+        else:
+            next_version = version + 1
+        value['next_version'] = next_version
         return value
     except IndexError:
         return None
@@ -92,11 +185,20 @@ def insert_card(card, session):
     Returns:
         dict: a dictionary representing the card after insertion into the database
     """
-    new_card = db.Card(display_title=card['display_title'],
-                       link=card['link'],
-                       content=card['content'],
-                       rendered_content=card['rendered_content'],
-                       edited_by=card['edited_by'])
+    try:
+        new_card = session.query(db.Card).filter(db.Card.link == card['link']).one()
+        new_card.content=card['content']
+        new_card.rendered_content=card['rendered_content']
+        new_card.edited_by=card['edited_by']
+
+    except NoResultFound:
+        id = None
+        new_card = db.Card(display_title=card['display_title'],
+                           link=card['link'],
+                           content=card['content'],
+                           rendered_content=card['rendered_content'],
+                           edited_by=card['edited_by'])
+    
     session.add(new_card)
     session.flush()
 
@@ -145,33 +247,6 @@ def get_tags_for_card(link, session):
                                 "href":"{0}tags/{1}".format(BASE_URL,
                                                             tag.tag)})
     return results
-
-def request_to_carddict(request):
-    """Converts a bottle request to a dictionary representing a card
-
-    Args:
-        request (bottle.request): A bottle request with json corresponding to a cardwiki card
-
-    Returns:
-        dict: a dictionary representing a card
-    """
-    formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
-    rendered_content = markdown.markdown(request.json['content'], formatted_url)
-    try:
-        version = request.json['version']
-        return {'link': request.json['link'],
-                'display_title': request.json['display_title'].strip(),
-                'version': version,
-                'content': request.json['content'],
-                'rendered_content': rendered_content,
-                'edited_by': request.json['edited_by']}
-    except KeyError as keyerror:
-        return {'link': request.json['link'],
-                'display_title': request.json['display_title'].strip(),
-                'version': 1,
-                'content': request.json['content'],
-                'rendered_content': rendered_content,
-                'edited_by': request.json['edited_by']}
 
 def insert_tags(tags, session):
     """Inserts a list of tag dictionaries into the database

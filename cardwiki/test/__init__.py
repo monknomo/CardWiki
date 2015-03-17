@@ -1,9 +1,12 @@
 import cardwiki
 from cardwiki.db import session_scope
 from cardwiki import views
+from cardwiki import Card, UndeletableAttributeException, InvalidKeyException
 from sqlalchemy.orm.exc import NoResultFound
 import unittest
 import copy
+import markdown
+from cardwiki.wikilinks import WikiLinkExtension
 
 class MockCardRequest:
     def __init__(self):
@@ -18,14 +21,103 @@ class MockTagRequest:
     def __init__(self):
         self.json = {'tags':[{'tag':'descriptive_tag', 
                               'tagged_card':'__startCard'}]}
-                              
+
+class TestCardwikiCard(unittest.TestCase):
+    def setUp(self):
+        pass
+        
+    def tearDown(self):
+        pass
+        
+    def test_card_constructor(self):
+        card = Card()
+        self.assertEqual("", card.link)
+        self.assertEqual("", card.display_title)
+        self.assertIsNone(card.version)
+        self.assertEqual("", card.content)
+        self.assertEqual("", card.rendered_content)
+        self.assertIsNone(card.edited_by)
+        card = Card(link="link", display_title="link", version=1, content="a", rendered_content="<p>a</p>", edited_by="unittest")
+        self.assertEqual("link", card.link)
+        self.assertEqual("link", card.display_title)
+        self.assertEqual(1, card.version)
+        self.assertEqual("a", card.content)
+        self.assertEqual("<p>a</p>", card.rendered_content)
+        self.assertEqual("unittest", card.edited_by)
+        mcr = MockCardRequest()
+        card = Card(json_dict=mcr.json)
+        self.assertEqual("json_test_title", card.link)
+        self.assertEqual("json test title", card.display_title)
+        self.assertEqual(4, card.version)
+        self.assertEqual("test content", card.content)
+        self.assertEqual("<p>test content</p>", card.rendered_content)
+        self.assertEqual("unittest", card.edited_by)
+        mcr = MockCardRequest()
+        mcr.json.pop("version", None)
+        card = Card(json_dict=mcr.json)
+        self.assertEqual(1, card.version)
+
+    def test_derive_title_link(self):
+        expected = "this_is_a_title"
+        result = Card.derive_title_link("this is a title")
+        self.assertEqual(expected, result)
+        
+class TestInvalidKeyException(unittest.TestCase):
+    def setUp(self):
+        pass
+        
+    def tearDown(self):
+        pass
+    
+    def test_constructor(self):
+        e = InvalidKeyException("a value")
+        self.assertEqual("a value", e.value)
+        self.assertEqual("'a value'", str(e))
+
+class TestUndeletableAttributeException(unittest.TestCase):
+    def setUp(self):
+        pass
+        
+    def tearDown(self):
+        pass
+    
+    def test_constructor(self):
+        e = UndeletableAttributeException("a value")
+        self.assertEqual("a value", e.value)
+        self.assertEqual("'a value'", str(e))
+
+class TestCardwikiMarkdown(unittest.TestCase):
+    def setUp(self):
+        pass
+        
+    def tearDown(self):
+        pass
+        
+    def test_wikilink(self):
+        content = """Welcome to *Card Wiki*
+========================
+
+Modify this card, or add new cards to get started.
+Check out our documentation at our websites
+
+Use [[wikilinks]] to make new cards"""
+        rendered_content = markdown.markdown(content,
+                                             extensions=[WikiLinkExtension(base_url='')])
+        expected = """<h1>Welcome to <em>Card Wiki</em></h1>
+<p>Modify this card, or add new cards to get started.
+Check out our documentation at our websites</p>
+<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(this, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>"""
+        self.assertEqual(expected, rendered_content)
+
+        
 class TestCardwikiFunctions(unittest.TestCase):
 
     def setUp(self):
         pass
         
     def tearDown(self):
-        pass
+        with session_scope() as session:
+            cardwiki._delete_card_versions(session)
 
     def test_get_cards(self):
         with session_scope() as session:
@@ -97,27 +189,32 @@ class TestCardwikiFunctions(unittest.TestCase):
             with session_scope() as session:
                 cardwiki.delete_card('foobar', session)
                 self.fail()
-        except NoResultFound as a:
+        except cardwiki.CardNotFoundException as a:
             pass
         except:
             self.fail()
 
     def test_request_to_carddict(self):
         request = MockCardRequest()
-        carddict = cardwiki.request_to_carddict(request)
-        self.assertEqual(request.json, carddict)
+        carddict = Card(json_dict=request.json)
+        self.assertEqual(request.json['link'], carddict['link'])
+        self.assertEqual(request.json['content'], carddict['content'])
+        self.assertEqual(request.json['rendered_content'], carddict['rendered_content'])
+        self.assertEqual(request.json['display_title'], carddict['display_title'])
+        self.assertEqual(int(request.json['version']), carddict['version'])
+        self.assertEqual(request.json['edited_by'], carddict['edited_by'])
 
     def test_request_to_carddict_no_version(self):
         request = MockCardRequest()
         request.json.pop("version", None)
-        carddict = cardwiki.request_to_carddict(request)
+        carddict = Card(json_dict=request.json)
         request.json['version'] = 1
         self.assertEqual(request.json, carddict)
 
     def test_insert_tags(self):
         tags = []
-        tags.append({"tag":"interesting", "tagged_card":1})
-        tags.append({"tag":"admin", "tagged_card":1})
+        tags.append({"tag":"interesting", "tagged_card":"__startCard"})
+        tags.append({"tag":"admin", "tagged_card":"__startCard"})
         try:
             with session_scope() as session:
                 cardwiki.insert_tags(tags, session)
@@ -134,8 +231,8 @@ class TestCardwikiFunctions(unittest.TestCase):
 
     def test_delete_tag(self):
         tags = []
-        tags.append({"tag":"interesting", "tagged_card":1})
-        tags.append({"tag":"admin", "tagged_card":1})
+        tags.append({"tag":"interesting", "tagged_card":"__startCard"})
+        tags.append({"tag":"admin", "tagged_card":"__startCard"})
         try:
             with session_scope() as session:
                 cardwiki.insert_tags(tags, session)
@@ -160,7 +257,7 @@ class TestCardwikiFunctions(unittest.TestCase):
             with session_scope() as session:
                 cardwiki.delete_tag({'tag':'foobar','tagged_card':'goocar'}, session)
                 self.fail()
-        except NoResultFound:
+        except cardwiki.CardNotFoundException:
             pass
 
     def test_find_all_tags(self):
@@ -192,18 +289,22 @@ class TestCardwikiFunctions(unittest.TestCase):
                                'reason':'User not found',
                                'request_url':'/' }, result)
                                
-class TestCardWikiViews(unittest.TestCase):
+class TestCardwikiViews(unittest.TestCase):
     def setUp(self):
         self.__startCard = {'edited_by':'admin', 
                             'content':'''Welcome to *Card Wiki*\n========================\n\nModify this card, or add new cards to get started.\nCheck out our documentation at our websites\n\nUse [[wikilinks]] to make new cards''', 
-                            'rendered_content':'''<h1>Welcome to <em>Card Wiki</em></h1>\n<p>Modify this card, or add new cards to get started.\nCheck out our documentation at our websites</p>\n<p>Use <a class="wikilink" href="#card_wikilinks" onClick="prependCard(this, &quot;/cards/wikilinks/&quot;)">wikilinks</a> to make new cards</p>''', 
+                            'rendered_content':"""<h1>Welcome to <em>Card Wiki</em></h1>
+<p>Modify this card, or add new cards to get started.
+Check out our documentation at our websites</p>
+<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(this, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>""", 
                             'display_title':'', 
                             'link':'__startCard', 
                             'id':1, 
                             'edited_at':'2015-02-08T10:33:34.573496'}
         
     def tearDown(self):
-        pass
+        with session_scope() as session:
+            cardwiki._delete_card_versions(session)
         
     def test_get_index(self):
         self.assertTrue(views.get_index().body.name.endswith('index.html'))
@@ -220,10 +321,6 @@ class TestCardWikiViews(unittest.TestCase):
         first = views.get_static('js/validator.min.js').body.name.endswith('validator.min.js')
         second = views.get_static('js/validator.min.js').body.name.endswith('validator.min.js')
         self.assertEqual(first, second)
-        
-    def test_get_static_bogus(self):
-        with self.assertRaises(bottle.HTTPError, views.get_static, 'js/validator.min.js.bogus') as hopefully_404:
-            self.assertEqual(404, hopefully_404.status)
     
     def test_get_all_cards(self):
         self.assertEqual(1, len(views.get_all_cards()['cards']))
@@ -234,7 +331,12 @@ class TestCardWikiViews(unittest.TestCase):
         self.assertEqual(first, second)
     
     def test_get_card(self):
-        self.assertEqual(self.__startCard, views.get_card('__startCard'))
+        self.assertEqual(self.__startCard['rendered_content'], views.get_card('__startCard')['rendered_content'])
+        self.assertEqual(self.__startCard['content'], views.get_card('__startCard')['content'])
+        self.assertEqual(self.__startCard['link'], views.get_card('__startCard')['link'])
+        self.assertEqual(self.__startCard['display_title'], views.get_card('__startCard')['display_title'])
+        self.assertEqual(self.__startCard['id'], views.get_card('__startCard')['id'])
+        self.assertEqual(self.__startCard['edited_by'], views.get_card('__startCard')['edited_by'])
     
     def test_get_card_twice(self):
         first = views.get_card('__startCard')
@@ -244,13 +346,21 @@ class TestCardWikiViews(unittest.TestCase):
     def test_get_card_bogus_card(self):
         response = views.get_card('__startCardasdfasdf')
         expected = {"status":"failure","reason":"Card '__startCardasdfasdf' not found"}
-        self.assertEqual(response.status, '404')
-        
+        self.assertEqual(expected, response)
     
     def test_get_card_version(self):
         __startCard_v1 = copy.deepcopy(self.__startCard)
         __startCard_v1['version'] = 1
-        self.assertEqual(__startCard_v1, views.get_card_version('__startCard', 1))
+        result = views.get_card_version('__startCard', 1)
+        print(__startCard_v1['rendered_content'])
+        print(result['rendered_content'])
+        self.assertEqual(__startCard_v1['display_title'], result['display_title'])
+        self.assertEqual(__startCard_v1['link'], result['link'])
+        self.assertEqual(__startCard_v1['version'], result['version'])
+        self.assertEqual(__startCard_v1['id'], result['id'])
+        self.assertEqual(__startCard_v1['content'], result['content'])
+        self.assertEqual(__startCard_v1['rendered_content'], result['rendered_content'])
+        self.assertEqual(__startCard_v1['edited_by'], result['edited_by'])
     
     def test_get_card_version_twice(self):
         first = views.get_card_version('__startCard', 1)
@@ -274,26 +384,23 @@ class TestCardWikiViews(unittest.TestCase):
     def test_get_card_version_bogus_version(self):
         response = views.get_card_version('__startCard', -1)
         expected = {"status":"failure", "reason":"No version -1 found for card '__startCard'"}
-        self.assertEqual(404, response.status)
         self.assertEqual(expected, response)
     
     def test_get_card_version_bogus_card(self):
         response = views.get_card_version('bogon_from_space', 1)
         expected = {"status":"failure", "reason":"No version 1 found for card 'bogon_from_space'"}
-        self.assertEqual(404, response.status)
         self.assertEqual(expected, response)
     
     def test_get_card_version_bogus_card_and_bogus_version(self):
         response = views.get_card_version('bogon_from_space', -1)
         expected = {"status":"failure", "reason":"No version -1 found for card 'bogon_from_space'"}
-        self.assertEqual(404, response.status)
         self.assertEqual(expected, response)
     
     def test_create_card(self):
         views.request = MockCardRequest()
         try:
             created_card = views.create_card(views.request.json['link'])
-            expected = cardwiki.request_to_carddict(views.request)
+            expected = Card(json_dict=views.request.json)
             self.assertEqual(expected['display_title'], created_card['display_title'])
             self.assertEqual(expected['edited_by'], created_card['edited_by'])
             self.assertEqual(expected['link'], created_card['link'])
@@ -323,7 +430,7 @@ class TestCardWikiViews(unittest.TestCase):
             created_card = views.create_card(views.request.json['link'])
             views.request.json['content'] = "totally different content"
             created_card_with_changes = views.create_card(views.request.json['link'])
-            expected = cardwiki.request_to_carddict(views.request)
+            expected = Card(json_dict=views.request.json)
             self.assertNotEqual(created_card, created_card_with_changes)
             self.assertEqual(expected['display_title'], created_card_with_changes['display_title'])
             self.assertEqual(expected['edited_by'], created_card_with_changes['edited_by'])
@@ -356,7 +463,6 @@ class TestCardWikiViews(unittest.TestCase):
         try:
             expected = {"status":"failure", "reason":"resource uri does not match link in request"}
             response = views.create_card('testcard')   
-            self.assertEqual(400, response.status)
             self.assertEqual(expected, response)
         finally:
             with session_scope() as session:
@@ -383,8 +489,7 @@ class TestCardWikiViews(unittest.TestCase):
         try:
             created_card = views.create_card(views.request.json['link'])
             response = views.delete_card(views.request.json['link'])
-            response = viewsdelete_card(views.request.json['link'])
-            self.assertEqual(400, response.status)
+            response = views.delete_card(views.request.json['link'])
         finally:
             with session_scope() as session:
                 card = cardwiki.get_newest_card(views.request.json['link'], session)
@@ -392,8 +497,9 @@ class TestCardWikiViews(unittest.TestCase):
                     cardwiki.delete_card(views.request.json['link'], session)
     
     def test_delete_card_nonexistent(self):
+        expected = {"status":"failure", "reason":"Tried to delete bogon_from_space, but it was not there"}  
         response = views.delete_card("bogon_from_space")
-        self.assertEqual(400, response.status)
+        self.assertEqual(expected, response)
             
     def test_get_card_tags(self):
         response = views.get_card_tags('__startCard')
@@ -407,7 +513,6 @@ class TestCardWikiViews(unittest.TestCase):
     
     def test_get_card_tags_bogus_card(self):
         response = views.get_card_tags('bogon_from_space')
-        self.assertEqual(400, response.status)
     
     def test_create_card_tags(self):
         views.request = MockTagRequest()
@@ -423,7 +528,7 @@ class TestCardWikiViews(unittest.TestCase):
     
     def test_create_card_tags_multiple_tags(self):
         views.request = MockTagRequest()
-        request.json['tags'].append({'tag':'another_tag', 'tagged_card':'__startCard'})
+        views.request.json['tags'].append({'tag':'another_tag', 'tagged_card':'__startCard'})
         try:
             response = views.create_card_tags('__startCard')
             expected = {'tags': [{'href':'/tags/administrivia', 
@@ -439,7 +544,7 @@ class TestCardWikiViews(unittest.TestCase):
     
     def test_create_card_tags_multiple_tags_twice(self):
         views.request = MockTagRequest()
-        request.json['tags'].append({'tag':'another_tag', 'tagged_card':'__startCard'})
+        views.request.json['tags'].append({'tag':'another_tag', 'tagged_card':'__startCard'})
         try:
             first = views.create_card_tags('__startCard')
             second = views.create_card_tags('__startCard')
@@ -462,10 +567,11 @@ class TestCardWikiViews(unittest.TestCase):
         finally:
             views.delete_card_tags('__startCard', 'descriptive_tag')
             
-    def test_create_card_tags_wrong_card_uri(self):           
+    def test_create_card_tags_wrong_card_uri(self):  
+        expected = {"reason": "Tag {'tag': 'descriptive_tag', 'tagged_card': '__startCard'} does not belong to card bogon_from_space", "status":"failure"}
         views.request = MockTagRequest()
         response = views.create_card_tags('bogon_from_space')
-        self.assertEqual(400, response.status)   
+        self.assertEqual(expected, response)
     
     def test_create_card_tags_tag_does_not_match_uri(self):
         #400 error when uri is valid, but request does not match uri, or is otherwise invalid
@@ -476,7 +582,6 @@ class TestCardWikiViews(unittest.TestCase):
         try:
             views.create_card_tags('__startCard')
             response = views.create_card_tags('__startCard')
-            self.assertEqual(400, response.status)
             self.assertCountEqual(expected, response)
         finally:
             views.delete_card_tags('__startCard', 'descriptive_tag')
@@ -484,20 +589,18 @@ class TestCardWikiViews(unittest.TestCase):
     def test_create_card_tags_tag_does_not_match_uri_and_uri_invalid(self):
         #404 error when uri is invalid
         views.request = MockTagRequest()
-        expected = {'reason': "Card 'bogon_from_space' does not exist",
+        expected = {'reason': "Tag {'tag': 'descriptive_tag', 'tagged_card': '__startCard'} does not belong to card bogon_from_space",
                     'status': 'failure'}
         response = views.create_card_tags('bogon_from_space')
-        self.assertEqual(404, response.status) 
         self.assertEqual(expected, response)
     
     def test_create_card_tags_invalid_uri(self):
         #404 error when uri is invalid
         views.request = MockTagRequest()
-        view.request.json['tags'][0]['tagged_card'] = 'bogon_from_space'
+        views.request.json['tags'][0]['tagged_card'] = 'bogon_from_space'
         expected = {'reason': "Card 'bogon_from_space' does not exist",
                     'status': 'failure'}
         response = views.create_card_tags('bogon_from_space')
-        self.assertEqual(404, response.status) 
         self.assertEqual(expected, response)
     
     def test_delete_card_tags(self):
@@ -522,15 +625,13 @@ class TestCardWikiViews(unittest.TestCase):
         response = views.create_card_tags('__startCard')        
         expected = {"status":"failure", "reason":"Tried deleting tag descriptive_tag for card bogon_from_space, but found no card"}
         result = views.delete_card_tags('bogon_from_space', 'descriptive_tag')
-        self.assertEqual(404, response.status)
         self.assertEqual(expected, result)
     
     def test_delete_card_tags_bogus_tag_bogus_card(self):
         views.request = MockTagRequest()
         response = views.create_card_tags('__startCard')        
-        expected = {"status":"failure", "reason":"Tried deleting tag descriptive_tag for card bogon_from_space, but found no card"}
+        expected = {"status":"failure", "reason":"Tried deleting tag bogus_tag for card bogon_from_space, but found no card"}
         result = views.delete_card_tags('bogon_from_space', 'bogus_tag')
-        self.assertEqual(404, response.status)
         self.assertEqual(expected, result)
     
 if __name__=='__main__':

@@ -2,7 +2,7 @@
 from cardwiki import db
 import os
 import markdown
-from markdown.extensions.wikilinks import WikiLinkExtension
+from cardwiki.wikilinks import WikiLinkExtension
 
 def create_db():
     """Creates the initial sqlite database"""
@@ -25,7 +25,7 @@ Check out our documentation at our websites
 
 Use [[wikilinks]] to make new cards"""
             rendered_content = markdown.markdown(content,
-                                                 extensions=[WikiLinkExtension(base_url='/cards/')])
+                                                 extensions=[WikiLinkExtension(base_url='')])
 
             card = db.Card(display_title="",
                            link="__startCard",

@@ -70,7 +70,7 @@
             cw.cancelEditCard(card.id.substring(21));
         };
         
-        function prependCard(wikilink, link){
+        function appendCard(wikilink, link){
             cw.getCard($(wikilink).parent().parent()[0].id.substring(8), link);
         }
         

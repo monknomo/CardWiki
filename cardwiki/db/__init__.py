@@ -210,7 +210,6 @@ class UserBiography(BASE):
 
 configure_mappers()
 CardVersion = version_class(Card)
-print("%%%%%%%%%%%%%%%%"+str(Card.__versioned__))
 CardTransaction = transaction_class(Card)
 
 

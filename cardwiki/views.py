@@ -77,15 +77,13 @@ def get_static(filename):
 def get_all_cards():
     with session_scope() as session:
         return {"cards":cardwiki.
-        get_cards(session)}
+        get_cards(session),"status":"success"}
 
 @get('{0}cards/<linkable_title>'.format(base_url))
 def get_card(linkable_title):
     with session_scope() as session:
         result = cardwiki.get_newest_card(linkable_title, session)
-        if result is None or result == {}:
-            request.status = 404
-            return {"status":"failure","reason":"Card '{0}' not found".format(linkable_title)}
+        result['status'] = 'success'
         return result
         
 @get('{0}cards/<linkable_title>/<version:int>'.format(base_url))
@@ -100,13 +98,17 @@ def get_card_version( linkable_title,version):
 #@require_authentication
 def create_card(linkable_title):
     card = Card(json_dict=request.json)
-    if linkable_title is not card['link']:
+    if card.edited_by is None:
+        card.edited_by = "anonymous"
+    if linkable_title != card.link:
         request.status = 400
         return {"status":"failure", "reason":"resource uri does not match link in request"}
     with session_scope() as session:
-        return cardwiki.insert_card(card,  
-                                    session)
-
+        inserted_card = cardwiki.insert_card(card,  
+                                             session)
+        inserted_card['status'] = "success"
+        return inserted_card
+        
 @delete('{0}cards/<linkable_title>'.format(base_url))
 def delete_card(linkable_title):
     with session_scope() as session:

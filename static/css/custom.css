@@ -9,6 +9,12 @@ div.card_content > h1, div.card_content * h1 {
 div.card_title_holder {
 	    border-bottom: .22em grey solid;
 		padding-bottom: .5em;
+        float:left;
+        width:95%;
+}
+
+span.cardTitleEditor{
+    float:left;
 }
 
 a.externalLink{

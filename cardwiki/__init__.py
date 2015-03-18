@@ -6,6 +6,7 @@ with the cardwiki database in a predictable and predefined way
 from sqlalchemy import func, and_, exists
 from sqlalchemy.orm.exc import NoResultFound
 import markdown
+from cardwiki.wikilinks import WikiLinkExtension
 from passlib.hash import bcrypt
 from sqlalchemy.orm.exc import NoResultFound as SqlAlchemyNoResultFound
 
@@ -34,11 +35,11 @@ class UndeletableAttributeException(Exception):
 class Card(collections.UserDict):
     _keys = ['link','display_title','version','content','rendered_content','edited_by']
     
-    def __init__(self, link="", display_title="", version=None, content="", rendered_content="", edited_by=None, json_dict=None):
+    def __init__(self, link="", display_title=None, version=None, content=None, rendered_content=None, edited_by=None, json_dict=None):
         collections.UserDict.__init__(self)
         if json_dict:
             formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
-            rendered_content = markdown.markdown(json_dict['content'], formatted_url)
+            rendered_content = markdown.markdown(json_dict['content'], extensions=[WikiLinkExtension(base_url='')])
             try:
                 version = json_dict['version']
                 if version:
@@ -152,7 +153,11 @@ def get_newest_card(link, session):
         newest_card = session.query(db.Card).filter(db.Card.link == link).one()
         return newest_card.to_dict()
     except NoResultFound:
-        return None
+        if link.startswith("__"):
+            display_title = None
+        else:
+            display_title = link.replace("_"," ")
+        return Card(link=link, display_title=display_title, version=1).data
 
 def get_card_version(link, version, session):
     try:
@@ -186,11 +191,10 @@ def insert_card(card, session):
         dict: a dictionary representing the card after insertion into the database
     """
     try:
-        new_card = session.query(db.Card).filter(db.Card.link == card['link']).one()
-        new_card.content=card['content']
-        new_card.rendered_content=card['rendered_content']
-        new_card.edited_by=card['edited_by']
-
+        new_card = session.query(db.Card).filter(db.Card.link == card.link).one()
+        new_card.content=card.content
+        new_card.rendered_content=card.rendered_content
+        new_card.edited_by=card.edited_by
     except NoResultFound:
         id = None
         new_card = db.Card(display_title=card['display_title'],
@@ -218,9 +222,7 @@ def delete_card(link, session):
             session.delete(card)
     else:
         value = "Tried to delete {0}, but it was not there".format(link)
-        e = CardNotFoundException(value)
-        print(e)
-        raise e
+        raise CardNotFoundException(value)
         
 def get_tags_for_card(link, session):
     """Gets all tags for a link to a card

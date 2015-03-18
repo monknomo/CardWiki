@@ -9,10 +9,19 @@ String.prototype.format = String.prototype.f = function() {
 };
 
 $.fn.goTo = function() {
+    console.log("scrolling to top");
+    console.log($(this).offset().top);
+    console.log($(document).height());
     $('html, body').animate({
-        scrollTop: $(this).offset().top - '70px'
+        scrollTop: $(this).offset().top
     }, 'fast');
     return this; // for chaining...
+}
+
+function bleeblorp(arg){
+    $('html, body').animate({
+        scrollTop: arg.offset().top - '70px'
+    }, 'fast');
 }
 
 $.deselectAll = function() {
@@ -48,7 +57,6 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
                 callback();
             }
         }else{
-            $('#card_'+ link).goTo();
             if(callback){
                 callback();
             }
@@ -56,45 +64,35 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
     }else{
         var that = this;
         this.cards[link] = "loading";
-        console.log('/cards/'+link);
         $.ajax({url:'/cards/' + link, 
                 type:'GET', 
                 dataType:'json',
                 success: function(data){
-                        console.log(data);
-                        var card = new Card(data);
-                        console.log(data);
-                        that.cards[card.link] = card;
-                        if(currentCardId)
-                            $(currentCardId).after(card.getHtml());
-                        else
-                            $("#cardList").html(card.getHtml());
-                        if(card.content == null){
-                            card.editMode();                            
-                        }else{                            
-                            card.viewMode();
-                            //card.loadTags();
-                        }
-                        //$("#card_"+card.link).goTo();
+                        console.log(data);                            
+                            var card = new Card(data);
+                            that.cards[card.link] = card;
+                            if(currentCardId){
+                                $("#card_"+currentCardId).after(card.getHtml());
+                            }else{
+                                $("#cardList").html(card.getHtml());
+                            }
+                            $("div#card_"+card.link).waitUntilExists(function(){
+                                if(data.content == null){
+                                    //card.editMode();  
+                                    that.editCard(link);
+                                }else{                            
+                                    card.viewMode();
+                                    //card.loadTags();
+                                }
+                            });                         
                         if(callback){
                             callback();
                         }   
                     },
                 error: function(data){
-                    console.log(data);
                     that.cards[link] = "error";
                     if(data.status == 404){
-                        //$(currentCardId + " > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
-                        var card = new Card({link:link,
-                                                title:link.replace("_"," "),
-                                                content:"",
-                                                rendered_content:""});
-                        that.cards[card.link] = card;
-                        if(currentCardId)
-                            $(currentCardId).after(card.getHtml());
-                        else
-                            $("#cardList").html(card.getHtml());
-                        card.editMode(); 
+                        $(currentCardId + " > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
                     }else{
                         $(currentCardId + " > div.announcements").html("<p><b>The server fell over, try again in a bit.  Give it room to breathe!!</b></p>");
                     }
@@ -107,21 +105,14 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
     }
 }
 
-var a = function(){
-console.log(data.link);
-                        var card = new Card(data);
-                        
-                        
-};
-
 CardWiki.prototype.editCard = function(link) {
     //link = fullLink.substring(7,fullLink.length - 1);
-    this.cards[link].editMode();
+    
     var editor = null;
     if (this.editors[link] == null){
         editor = new EpicEditor({container:"editor_" + link, 
                                             basePath:'/static',
-                                            autogrow:{minHeight:225, maxHeight:800, scroll:true},
+                                            autogrow:{minHeight:225, maxHeight:800, scroll:false},
                                             theme: {base: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css',
                                             preview: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css',
                                             editor: 'https://cdnjs.cloudflare.com/ajax/libs/epiceditor/0.2.2/themes/editor/epic-light.css'}});
@@ -129,7 +120,7 @@ CardWiki.prototype.editCard = function(link) {
     }else{
         editor = this.editors[link];
     }
-    editor.load();
+    editor.load();    
     if ( editor.getFiles('cardWiki_' + link) === undefined){
         editor.importFile('cardWiki_' + link, this.cards[link].content);
     }else{
@@ -138,8 +129,8 @@ CardWiki.prototype.editCard = function(link) {
         }else{
             editor.open('cardWiki_' + link);
         }        
-    }
-    $('#card_'+ link).goTo();
+    } 
+    this.cards[link].editMode();    
 }  
 
 CardWiki.prototype.cancelEditCard = function(link){
@@ -175,19 +166,19 @@ CardWiki.prototype.saveCard = function(link, callback){
                         tags:[],
                         version:null});
     if($("#titleEditorInput_"+link)[0]){
-        newCard.title = $("#titleEditorInput_"+link)[0].value;
+        newCard.display_title = $("#titleEditorInput_"+link)[0].value;
     }else{
         //consider whether cards need to have titles at all...
-        newCard.title = link;
+        newCard.display_title = link;
     }			
-    if(this.username!=null){
-        newCard.username=this.username;
-        newCard.password=this.password;
-        newCard.edited_by=this.username;
-    }else{
-        this.requireLogin();
-        return;
-    }
+    //if(this.username!=null){
+    //    newCard.username=this.username;
+    //    newCard.password=this.password;
+    //    newCard.edited_by=this.username;
+    //}else{
+    //    this.requireLogin();
+    //    return;
+    //}
     //perhaps we should just post to /cards/ as we don't know whether this exists or not
     var that = this;
     $.ajax({url:"/cards/"+link,
@@ -196,14 +187,15 @@ CardWiki.prototype.saveCard = function(link, callback){
         dataType:'json',
         data:JSON.stringify(newCard),
         success: function(data){
-                  if(data.authentication_status == "success"){
+                  if(data.status == "success"){
                         $("#announcements_"+link).hide();
                         link = data.link
                         card = new Card(data);
                         that.cards[link] = card;
                         card.viewMode();
-                        if(that.editors[link]!=null){                                        
-                            that.editors[link] = null;                                      
+                        if(that.editors[link]!=null){   
+                            that.editors[link].unload();
+                            delete that.editors[link];                                      
                         }
                     } else {
                         that.requireLogin(that.saveCard,"/cards/" + link)
@@ -213,8 +205,6 @@ CardWiki.prototype.saveCard = function(link, callback){
                     }
                 },
         error: function(data){
-            console.log("problem saving card");
-            console.log(data);
             $("#announcements_"+link).html("<p><b>Something has gone wrong, try again in a bit</b></p>");
             $("#announcements_"+link).show();
             if(callback){
@@ -230,23 +220,19 @@ CardWiki.prototype.getTags = function(cardLink, callback){
             type:'GET',
             dataType:'json',
             success: function(data){
-                console.log(data);
                 $('#tagsBox_' + cardLink + ' > input').importTags('');
                 if(data.tags == null || data.tags.length < 1){
                     //do nothing
                 }else{
-                    console.log(data);
                     this.tags = data.tags;
                     var tagVals = "";
                     for( var i = 0; i < this.tags.length; i++){
-                        console.log(this.tags[i]);
                         if(tagVals == ""){
                             tagVals = this.tags[i].tag;
                         }else{
                             tagVals = tagVals + "," + this.tags[i].tag;
                         }
                     }
-                    console.log(tagVals);
                     $('#tagsBox_' + cardLink + ' > input').importTags(tagVals);	                 
                 }
                 if(callback){
@@ -269,7 +255,6 @@ function listAllCards(){
     $.ajax({url:'/cards',
                 type:'GET',
                 success: function(data){
-                    console.log(data);
                     var tagCard = "<div id='card_{0}' class='jumbotron adminCard'>"+
                             "<div class='card_title_holder'>" +
                                 "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>" +
@@ -283,7 +268,7 @@ function listAllCards(){
                     //var cardList = "<div class='card_title_holder'><h1>Tag: "+tag+"</h1></div><ul>"
                     var cardList = "<ul>";
                     for(var i = 0; i < data.cards.length; i++){
-                        cardList += "<li><a href='#card_{0}' onclick='appendCard(this, \"{1}\")'>{2}</a></li>".format(data.cards[i].linkable_title, data.cards[i].href, data.cards[i].title)
+                        cardList += "<li><a href='#card_{0}' onclick='appendCard(this, \"{1}\")'>{2}</a></li>".format(data.cards[i].linkable_title, data.cards[i].href, data.cards[i].display_title)
                     }
                     cardList += "</ul>";
                     console.log(cardList);
@@ -296,10 +281,19 @@ function listAllCards(){
 }
         
  function Card(jsonData) {
-            this.title = jsonData.title;
-            this.link= jsonData.link
-            this.content = jsonData.content;
-            this.rendered_content = jsonData.rendered_content;
+            this.link= jsonData.link;
+            if (this.link.slice(0,2) == "__"){
+                this.display_title = "";
+            }else{
+                this.display_title = jsonData.display_title;
+            }
+            if (jsonData.content == null){            
+                this.content = "";
+                this.rendered_content = "";
+            }else{
+                this.content = jsonData.content;
+                this.rendered_content = jsonData.rendered_content;
+            }            
             this.edited_at = jsonData.edited_at;
             this.edited_by = jsonData.edited_by;
             //takes a seperate post to get these
@@ -313,7 +307,7 @@ Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='open
                                 "<span id='title_{0}' class='card_title'><h1>{2}</h1></span>" +
                                 "<span id='titleEditor_{0}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{0}' type='text' class='form-control'value='{2}'></input></span>" +
                             "</div>" +
-                            "<hr>" +
+                            //"<hr>" +
                             "<div style='height:1em;width:100%;clear:both;'></div>"+	
                             "<div id='announcements_{0}' class='announcements'></div>"+
                             "<div id='content_{0}' class='card_content'>{1}</div>"+
@@ -346,18 +340,14 @@ Card.prototype.getHtml = function(){
     if(this.link.slice(0,2) == "__"){
         return Card.card_template_sans_title.format(this.link, this.rendered_content);
     }else{
-        var pretty_title = this.title.replace("_", " ");
-        return Card.card_template.format(this.link, this.rendered_content, this.title);
+        //var pretty_title = this.title.replace("_", " ");
+        return Card.card_template.format(this.link, this.rendered_content, this.display_title);
     }
 };
-(function($) {
-    $.fn.querytagsinput = function(){
-        console.log(delimiter);
-    }
-})
 
 Card.prototype.viewMode = function(){
     //card_'+this.link).show();
+    var cardlink = this.link;
     $("div#content_"+ this.link).html(this.rendered_content);
     $('a#saveButton_'+this.link).hide();
     $('a#cancelCardEditButton_'+this.link).hide();
@@ -366,8 +356,8 @@ Card.prototype.viewMode = function(){
     $("div#content_"+ this.link).show();
     $("a#editButton_"+ this.link).show();
     $("div#editor_"+this.link).hide();
-    console.log($('#card_'+this.link));
-    $("div#card_"+this.link).goTo();
+    $('div#card_'+this.link).show();
+    $("div#card_"+this.link).waitUntilExists(function(){$("div#card_"+cardlink).goTo()});
     var taggedCardTitle = this.link;
     if(!$('#tags_' + this.link + "_tagsinput").length){
         var that = this;
@@ -383,6 +373,7 @@ Card.prototype.viewMode = function(){
 };
 
 Card.prototype.editMode = function(){
+    var cardlink = this.link;
     $.deselectAll();
     $("#title_"+ this.link).hide();
     $("#titleEditor_"+ this.link).show();
@@ -391,6 +382,14 @@ Card.prototype.editMode = function(){
     $("#saveButton_"+ this.link).show();
     $("#cancelCardEditButton_"+ this.link).show();    
     $("#editor_"+this.link).show();
+    var cardSelector = $("div#card_"+this.link)
+    //if(cardSelector.length>0){
+    //    if(this.content=""){
+    //        cardSelector.waitUntilExists(function(){cardSelector.goTo()});
+    //    }
+    //}else{
+        cardSelector.waitUntilExists(function(){cardSelector.goTo()});
+    //}
 };
 
 Card.prototype.deleteTag = function(tag){

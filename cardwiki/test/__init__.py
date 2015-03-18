@@ -32,10 +32,10 @@ class TestCardwikiCard(unittest.TestCase):
     def test_card_constructor(self):
         card = Card()
         self.assertEqual("", card.link)
-        self.assertEqual("", card.display_title)
+        self.assertIsNone(card.display_title)
         self.assertIsNone(card.version)
-        self.assertEqual("", card.content)
-        self.assertEqual("", card.rendered_content)
+        self.assertIsNone(card.content)
+        self.assertIsNone(card.rendered_content)
         self.assertIsNone(card.edited_by)
         card = Card(link="link", display_title="link", version=1, content="a", rendered_content="<p>a</p>", edited_by="unittest")
         self.assertEqual("link", card.link)
@@ -56,6 +56,26 @@ class TestCardwikiCard(unittest.TestCase):
         mcr.json.pop("version", None)
         card = Card(json_dict=mcr.json)
         self.assertEqual(1, card.version)
+        mcr = MockCardRequest()
+        mcr.json['content'] = "test content [[bears]]"
+        mcr.json['rendered_content'] = None
+        card = Card(json_dict=mcr.json)
+        self.assertEqual("json_test_title", card.link)
+        self.assertEqual("json test title", card.display_title)
+        self.assertEqual(4, card.version)
+        self.assertEqual("test content [[bears]]", card.content)
+        self.assertEqual("<p>test content <a class=\"wikilink\" href=\"#card_bears\" onClick=\"appendCard(this, &quot;bears&quot;)\">bears</a></p>", card.rendered_content)
+        self.assertEqual("unittest", card.edited_by)
+        mcr = MockCardRequest()
+        mcr.json['rendered_content'] = None
+        card = Card(json_dict=mcr.json)
+        self.assertEqual("json_test_title", card.link)
+        self.assertEqual("json test title", card.display_title)
+        self.assertEqual(4, card.version)
+        self.assertEqual("test content", card.content)
+        self.assertEqual("<p>test content</p>", card.rendered_content)
+        self.assertEqual("unittest", card.edited_by)
+        mcr = MockCardRequest()
 
     def test_derive_title_link(self):
         expected = "this_is_a_title"
@@ -144,9 +164,10 @@ class TestCardwikiFunctions(unittest.TestCase):
 
     def test_get_newest_card_nonexistent(self):
         card = None
+        expected = Card(link='foobar', display_title='foobar', version=1)
         with session_scope() as session:
             card = cardwiki.get_newest_card('foobar', session)
-        self.assertIsNone(card)
+        self.assertEqual(expected, card)
 
     def test_insert_card(self):
         try:
@@ -170,6 +191,7 @@ class TestCardwikiFunctions(unittest.TestCase):
 
     def test_delete_card(self):
         card = {}
+        expected = Card(link='test_card', display_title='test card', version=1)
         with session_scope() as session:
             initial_card = {'display_title' : "test card",
                                             'link':"test_card",
@@ -181,7 +203,7 @@ class TestCardwikiFunctions(unittest.TestCase):
             self.assertIsNotNone(card['id'])
             cardwiki.delete_card(card['link'], session)
             card = cardwiki.get_newest_card(card['link'], session)
-        self.assertIsNone(card)
+        self.assertEqual(expected, card)
 
     def test_delete_card_nonexistent(self):
         card = None
@@ -345,7 +367,7 @@ Check out our documentation at our websites</p>
     
     def test_get_card_bogus_card(self):
         response = views.get_card('__startCardasdfasdf')
-        expected = {"status":"failure","reason":"Card '__startCardasdfasdf' not found"}
+        expected = Card(link='__startCardasdfasdf', display_title=None, version=1)
         self.assertEqual(expected, response)
     
     def test_get_card_version(self):
@@ -467,7 +489,7 @@ Check out our documentation at our websites</p>
         finally:
             with session_scope() as session:
                 card = cardwiki.get_newest_card(views.request.json['link'], session)
-                if card is not None:
+                if card['content'] is not None:
                     cardwiki.delete_card(views.request.json['link'], session)
     
     def test_delete_card(self):
@@ -481,7 +503,7 @@ Check out our documentation at our websites</p>
         finally:
             with session_scope() as session:
                 card = cardwiki.get_newest_card(views.request.json['link'], session)
-                if card is not None:
+                if card['content'] is not None:
                     cardwiki.delete_card(views.request.json['link'], session)
     
     def test_delete_card_twice(self):
@@ -493,7 +515,7 @@ Check out our documentation at our websites</p>
         finally:
             with session_scope() as session:
                 card = cardwiki.get_newest_card(views.request.json['link'], session)
-                if card is not None:
+                if card['content'] is not None:
                     cardwiki.delete_card(views.request.json['link'], session)
     
     def test_delete_card_nonexistent(self):

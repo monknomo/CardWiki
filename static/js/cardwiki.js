@@ -58,7 +58,14 @@ CardWiki.prototype.getCard = function(currentCardSelector, link, callback){
                 callback();
             }
         }else{
-            $("div#card_"+link).waitUntilExists(function(){$("div#card_"+link).goTo()});
+            var targetCard = $("div#card_"+link);
+            if (targetCard.length > 0){
+                targetCard.goTo();
+            }else{
+            targetCard.waitUntilExists(function(){
+                $("div#card_"+link).goTo();
+                });
+            }
             if(callback){
                 callback();
             }

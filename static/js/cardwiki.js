@@ -488,7 +488,7 @@ Card.prototype.tagClicked = function(tag, callback){
                     //var cardHtml = Card.card_template_synthetic_card.format("tag_"+tag, syntheticCardContent);
                     var cardOfTags = new Card({link:"__Tag_"+tag,display_title:"Tag: " + tag, content:syntheticCardContent, rendered_content:syntheticCardContent, edited_at:null, edited_by:'anonymous',version:1}, true, that.parent)
                     console.log(cardOfTags);
-                    that.parent.addCard("#card_"+that.link, cardOfTags, false);
+                    that.parent.addCard($("#card_"+that.link), cardOfTags, false);
                     if(callback){
                         callback();
                     }

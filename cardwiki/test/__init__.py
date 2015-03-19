@@ -64,7 +64,7 @@ class TestCardwikiCard(unittest.TestCase):
         self.assertEqual("json test title", card.display_title)
         self.assertEqual(4, card.version)
         self.assertEqual("test content [[bears]]", card.content)
-        self.assertEqual("<p>test content <a class=\"wikilink\" href=\"#card_bears\" onClick=\"appendCard(this, &quot;bears&quot;)\">bears</a></p>", card.rendered_content)
+        self.assertEqual("<p>test content <a class=\"wikilink\" href=\"#card_bears\" onClick=\"appendCard(&quot;json_test_title&quot;, &quot;bears&quot;)\">bears</a></p>", card.rendered_content)
         self.assertEqual("unittest", card.edited_by)
         mcr = MockCardRequest()
         mcr.json['rendered_content'] = None
@@ -122,11 +122,11 @@ Check out our documentation at our websites
 
 Use [[wikilinks]] to make new cards"""
         rendered_content = markdown.markdown(content,
-                                             extensions=[WikiLinkExtension(base_url='')])
+                                             extensions=[WikiLinkExtension(base_url='', card_link='__startCard')])
         expected = """<h1>Welcome to <em>Card Wiki</em></h1>
 <p>Modify this card, or add new cards to get started.
 Check out our documentation at our websites</p>
-<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(this, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>"""
+<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(&quot;__startCard&quot;, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>"""
         self.assertEqual(expected, rendered_content)
 
         
@@ -318,7 +318,7 @@ class TestCardwikiViews(unittest.TestCase):
                             'rendered_content':"""<h1>Welcome to <em>Card Wiki</em></h1>
 <p>Modify this card, or add new cards to get started.
 Check out our documentation at our websites</p>
-<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(this, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>""", 
+<p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(&quot;__startCard&quot;, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>""", 
                             'display_title':'', 
                             'link':'__startCard', 
                             'id':1, 

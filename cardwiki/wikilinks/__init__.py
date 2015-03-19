@@ -30,6 +30,7 @@ class WikiLinkExtension(Extension):
             'end_url' : ['', 'String to append to end of URL.'],
             'html_class' : ['wikilink', 'CSS hook. Leave blank for none.'],
             'build_url' : [build_url, 'Callable formats URL from label.'],
+            'card_link' : ['', 'link for the wiki card this link belongs to']
         }
         
         super(WikiLinkExtension, self).__init__(*args, **kwargs)
@@ -51,10 +52,10 @@ class WikiLinks(Pattern):
         self.config = config
   
     def handleMatch(self, m):
-        print("+++++handling match+++++++++++")
-        print(m)
         if m.group(2).strip():
-            base_url, end_url, html_class = self._getMeta()
+            print("%%%%%%%%%%%%%%%%%")
+            print(self._getMeta())
+            base_url, end_url, html_class, card_link = self._getMeta()
             wl = m.group(2).strip()
             wl_pair = wl.split("|", 1)
             print(wl_pair)
@@ -63,56 +64,36 @@ class WikiLinks(Pattern):
                 #display = re.sub(r'\|', '', wl_pair[1].strip())
                 label = wl_pair[0].strip()
                 url = wl_pair[1].strip()
-                print("+++++++++++++match1++++++++++++++++++++++++++++++++++")
-                print(url)
-                print(label)
                 #url = self.config['build_url'](label, base_url, end_url)
                 a = self._getExternalLink(label, url)
             elif len(wl_pair) == 1:
                 label = wl_pair[0].strip()
                 display = label
-                print("+++++++++++++match2++++++++++++++++++++++++++++++++++")
-                print(display)
-                print(label)
                 url = self.config['build_url'](label, base_url, end_url)
                 label = re.sub(r'([ ]+)', '%20', label)
                 a = self._getInternalLink(display, label, url)
             else:
                 label = m.group(2).strip()
                 display = label
-                print("+++++++++++++match3++++++++++++++++++++++++++++++++++")
-                print(display)
-                print(label)
                 url = self.config['build_url'](label, base_url, end_url)
                 label = re.sub(r'([ ]+)', '%20', label)
                 a = self._getInternalLink(display, label, url)
-                
-            #url = self.config['build_url'](label, base_url, end_url)
-            #a = etree.Element('a')
-
-            #clean_label = re.sub(r'([ ]+_)|(_[ ]+)|([ ]+)', '_', label)
-            #clean_label = re.sub(r'([ ]+)', '%20', label)
-            #a.text = display      
-            #a.set('href', '#card_' + clean_label)
-            #a.set('onClick', "prependCard(this, \""+url+"\")")    
-            #if html_class:
-            #    a.set('class', html_class)
         else:
             a = ''
         return a
     
     def _getInternalLink(self, display, label, url):
-        base_url, end_url, html_class = self._getMeta()
+        base_url, end_url, html_class, card_link = self._getMeta()
         a = etree.Element('a')
         a.text = display
         a.set('href', '#card_' + label)
-        a.set('onClick', "appendCard(this, \""+url+"\")") 
+        a.set('onClick', "appendCard(\""+card_link+"\", \""+url+"\")") 
         if html_class:
                 a.set('class', html_class)
         return a
     
     def _getExternalLink(self, display, url):
-        base_url, end_url, html_class = self._getMeta()
+        base_url, end_url, html_class, card_link = self._getMeta()
         a = etree.Element('a')
         a.text = display
         a.set('href', url)
@@ -126,6 +107,7 @@ class WikiLinks(Pattern):
         base_url = self.config['base_url']
         end_url = self.config['end_url']
         html_class = self.config['html_class']
+        card_link = self.config['card_link']
         if hasattr(self.md, 'Meta'):
             if 'wiki_base_url' in self.md.Meta:
                 base_url = self.md.Meta['wiki_base_url'][0]
@@ -133,7 +115,7 @@ class WikiLinks(Pattern):
                 end_url = self.md.Meta['wiki_end_url'][0]
             if 'wiki_html_class' in self.md.Meta:
                 html_class = self.md.Meta['wiki_html_class'][0]
-        return base_url, end_url, html_class
+        return base_url, end_url, html_class, card_link
     
 
 def makeExtension(*args, **kwargs) :

@@ -178,7 +178,7 @@ class TestCardwikiFunctions(unittest.TestCase):
                                 'rendered_content':
                                     "<h3>test content</h3>",
                                 'edited_by':"unittest"}
-                card = cardwiki.insert_card(initial_card, session)
+                card = cardwiki.insert_card(Card(json_dict=initial_card), session)
                 self.assertIsNotNone(card['id'])
                 self.assertEqual(initial_card['display_title'], card['display_title'])
                 self.assertEqual(initial_card['link'], card['link'])
@@ -199,7 +199,7 @@ class TestCardwikiFunctions(unittest.TestCase):
                                             'rendered_content':
                                                 "<h3>test content</h3>",
                                             'edited_by':"admin"}
-            card = cardwiki.insert_card(initial_card, session)
+            card = cardwiki.insert_card(Card(json_dict=initial_card), session)
             self.assertIsNotNone(card['id'])
             cardwiki.delete_card(card['link'], session)
             card = cardwiki.get_newest_card(card['link'], session)
@@ -368,6 +368,7 @@ Check out our documentation at our websites</p>
     def test_get_card_bogus_card(self):
         response = views.get_card('__startCardasdfasdf')
         expected = Card(link='__startCardasdfasdf', display_title=None, version=1)
+        expected.status="success"
         self.assertEqual(expected, response)
     
     def test_get_card_version(self):
@@ -395,8 +396,6 @@ Check out our documentation at our websites</p>
         while current['next_version'] is not None:
             previous = current
             current = views.get_card_version('__startCard', int(current['next_version']))
-            if current.status == 404:
-                break #we've run out of versions
             if current is not None and previous is not None:
                 self.assertEqual(current['link'], previous['link'])
                 self.assertEqual(previous['version'] + 1, current['version'])

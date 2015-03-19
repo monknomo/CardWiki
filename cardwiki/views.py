@@ -126,11 +126,11 @@ def get_card_tags(linkable_title):
         except cardwiki.CardNotFoundException as cardNotFound:
             return {"status":"failure", "reason":cardNotFound.value}  
 
-@put('{0}cards/<linkable_title>/tags/'.format(base_url))
+@post('{0}cards/<linkable_title>/tags/'.format(base_url))
 #@require_authentication 
 def create_card_tags(linkable_title):
     for tag in request.json['tags']:
-        if tag['tagged_card'] is not linkable_title:
+        if tag['tagged_card'] != linkable_title:
             print(tag['tag'])
             return {"status":"failure", "reason":"Tag {{'tag': '{0}', 'tagged_card': '{1}'}} does not belong to card {2}".format(tag['tag'], tag['tagged_card'], linkable_title)
             }
@@ -154,10 +154,10 @@ def delete_card_tags(linkable_title, tag):
             
 @get('{0}tags/'.format(base_url))
 def get_all_tags():
-    with db.session_scope() as session:
+    with session_scope() as session:
         return cardwiki.find_all_tags(session)
 
 @get('{0}tags/<tag>'.format(base_url))
 def get_cards_for_tag(tag):
-    with db.session_scope() as session:
+    with session_scope() as session:
         return cardwiki.find_cards_for_tag(tag, session)

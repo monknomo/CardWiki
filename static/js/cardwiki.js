@@ -37,18 +37,19 @@ $.deselectAll = function() {
 }
 
 function CardWiki(){
-            this.cards = []
-            this.editors = []
+            this.cards = [];
+            this.syntheticCards = [];
+            this.editors = [];
             this.username = null;
             this.password = null;
         }
         
-CardWiki.prototype.getCard = function(currentCardId, link, callback){
+CardWiki.prototype.getCard = function(currentCardSelector, link, callback){
     if(this.cards[link] != null){
         if(this.cards[link] === "loading"){
             var that = this;
             setTimeout(function(){
-                that.getCard(currentCardId, link, callback);
+                that.getCard(currentCardSelector, link, callback);
             }, 1200);
         }else if(this.cards[link] == "error"){
             //server communications, halt until user tries again
@@ -69,22 +70,13 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
                 dataType:'json',
                 success: function(data){
                         console.log(data);                            
-                            var card = new Card(data);
-                            that.cards[card.link] = card;
-                            if(currentCardId){
-                                $("#card_"+currentCardId).after(card.getHtml());
+                            var card = new Card(data, false, that);
+                            
+                            if(data.content == null){
+                                that.addCard(currentCardSelector, card, true);    
                             }else{
-                                $("#cardList").html(card.getHtml());
+                                that.addCard(currentCardSelector, card, false);    
                             }
-                            $("div#card_"+card.link).waitUntilExists(function(){
-                                if(data.content == null){
-                                    //card.editMode();  
-                                    that.editCard(link);
-                                }else{                            
-                                    card.viewMode();
-                                    //card.loadTags();
-                                }
-                            });                         
                         if(callback){
                             callback();
                         }   
@@ -92,17 +84,39 @@ CardWiki.prototype.getCard = function(currentCardId, link, callback){
                 error: function(data){
                     that.cards[link] = "error";
                     if(data.status == 404){
-                        $(currentCardId + " > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
+                        $(currentCardSelector).filter(" > div.announcements").html("<p><b>Something has gone very wrong, I can't find that card at all!</b></p>");
                     }else{
-                        $(currentCardId + " > div.announcements").html("<p><b>The server fell over, try again in a bit.  Give it room to breathe!!</b></p>");
+                        $(currentCardSelector).filter(" > div.announcements").html("<p><b>The server fell over, try again in a bit.  Give it room to breathe!!</b></p>");
                     }
-                    setTimeout(function(){$(currentCardId + " > div.announcements").html("");},10000);
+                    setTimeout(function(){$(currentCardSelector).filter(" > div.announcements").html("");},10000);
                     if(callback){
                         callback();
                     }
                 }
             });
     }
+}
+
+CardWiki.prototype.addCard = function(currentCardSelector, card, editMode){
+    editMode = typeof editMode !== 'undefined' ? editMode : false;
+    if(card.synthetic){
+        this.syntheticCards[card.link] = card;
+    }else{
+        this.cards[card.link] = card;
+    }
+    if(currentCardSelector){
+        currentCardSelector.after(card.getHtml());
+    }else{
+        $("div#cardList").html(card.getHtml());
+    }
+    var that = this;
+    $("div#card_"+card.link).waitUntilExists(function(){
+        if(editMode){
+            that.editCard(card.link);
+        }else{                            
+            card.viewMode();;
+        }
+    });         
 }
 
 CardWiki.prototype.editCard = function(link) {
@@ -137,14 +151,21 @@ CardWiki.prototype.cancelEditCard = function(link){
    // var link = obj.id.substring(21);    
     delete this.editors[link];
     $("#editor_"+link).empty();
-    this.cards[link].viewMode();
+    this.cards[link].viewMode(this);;
 }
 
 CardWiki.prototype.removeCard = function(link){
     //var title = obj.id.substring(11);
-    $("#card_"+link).remove();
-    this.editors[link] = null;
-    this.cards[link] = null;
+    if(this.cards[link]){
+        $("#card_"+link).remove();
+        this.editors[link] = null;
+        this.cards[link] = null;
+    }else{
+        $("#card_"+link).remove();
+        this.editors[link] = null;
+        this.cards[link] = null;
+    }
+
 
 }
 
@@ -164,7 +185,7 @@ CardWiki.prototype.saveCard = function(link, callback){
                         edited_at:null, 
                         edited_by:this.username,
                         tags:[],
-                        version:null});
+                        version:null}, false, this);
     if($("#titleEditorInput_"+link)[0]){
         newCard.display_title = $("#titleEditorInput_"+link)[0].value;
     }else{
@@ -190,9 +211,9 @@ CardWiki.prototype.saveCard = function(link, callback){
                   if(data.status == "success"){
                         $("#announcements_"+link).hide();
                         link = data.link
-                        card = new Card(data);
+                        card = new Card(data, false, that);
                         that.cards[link] = card;
-                        card.viewMode();
+                        card.viewMode(that);;
                         if(that.editors[link]!=null){   
                             that.editors[link].unload();
                             delete that.editors[link];                                      
@@ -280,26 +301,28 @@ function listAllCards(){
         });
 }
         
- function Card(jsonData) {
-            this.link= jsonData.link;
-            if (this.link.slice(0,2) == "__"){
-                this.display_title = "";
-            }else{
-                this.display_title = jsonData.display_title;
-            }
-            if (jsonData.content == null){            
-                this.content = "";
-                this.rendered_content = "";
-            }else{
-                this.content = jsonData.content;
-                this.rendered_content = jsonData.rendered_content;
-            }            
-            this.edited_at = jsonData.edited_at;
-            this.edited_by = jsonData.edited_by;
-            //takes a seperate post to get these
-            this.tags = [];
-            this.version = jsonData.version;
-        }
+ function Card(jsonData, synthetic, parent) {
+    this.link= jsonData.link;
+    if (this.link.slice(0,2) == "__"){
+        this.display_title = "";
+    }else{
+        this.display_title = jsonData.display_title;
+    }
+    if (jsonData.content == null){            
+        this.content = "";
+        this.rendered_content = "";
+    }else{
+        this.content = jsonData.content;
+        this.rendered_content = jsonData.rendered_content;
+    }            
+    this.edited_at = jsonData.edited_at;
+    this.edited_by = jsonData.edited_by;
+    //takes a seperate post to get these
+    this.tags = [];
+    this.version = jsonData.version;
+    this.synthetic = synthetic
+    this.parent = parent;
+}
         
 Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>"+
                             "<div class='card_title_holder'>" +
@@ -336,12 +359,24 @@ Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card' ondbl
                                         "</p></div>"+
                                     "</div>";
 
+Card.card_template_synthetic_card = "<div id='card_{0}' class='jumbotron card synthetic'>" +
+                                        "<div>"+
+                                            "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>" +
+                                        "<div style='height:1em;clear:both;'></div>" +
+                                        "<div id='announcements_{0}' class='announcements'></div>"+
+                                        "<div id='content_{0}' class='card_content' >{1}</div>"+
+                                    "</div>";
+                                    
 Card.prototype.getHtml = function(){
-    if(this.link.slice(0,2) == "__"){
-        return Card.card_template_sans_title.format(this.link, this.rendered_content);
+    if(this.synthetic){
+        return Card.card_template_synthetic_card.format(this.link, this.rendered_content);
     }else{
-        //var pretty_title = this.title.replace("_", " ");
-        return Card.card_template.format(this.link, this.rendered_content, this.display_title);
+        if(this.link.slice(0,2) == "__"){
+            return Card.card_template_sans_title.format(this.link, this.rendered_content);
+        }else{
+            //var pretty_title = this.title.replace("_", " ");
+            return Card.card_template.format(this.link, this.rendered_content, this.display_title);
+        }
     }
 };
 
@@ -366,8 +401,8 @@ Card.prototype.viewMode = function(){
             width:'85%',
             overwriteTagInput: false,
             onRemoveTag:function(tag){that.deleteTag(tag);},
-            onAddTag:function(tag){that.addTag( tag);},
-            onClickTag:function(tag){that,tagClicked(taggedCardTitle);}
+            onAddTag:function(tag){that.addTag(tag);},
+            onClickTag:function(tag){that.tagClicked(tag);}
         });
     }
 };
@@ -392,14 +427,77 @@ Card.prototype.editMode = function(){
     //}
 };
 
-Card.prototype.deleteTag = function(tag){
-    console.log(tag);
+Card.prototype.deleteTag = function(tag, callback){
+    $.ajax({url:"/cards/"+this.link+"/tags/"+tag,
+        type:'DELETE',
+        success: function(data){
+                    if(callback){
+                        callback();
+                    }
+                },
+        error: function(data){
+            console.log(data);
+            if(callback){
+                callback();
+            }
+        }
+        });
 };
 
-Card.prototype.addTag = function(tag){
-    console.log(tag);
+Card.prototype.addTag = function(tag, callback){
+    var newTag = {tags:[{tagged_card:this.link,tag:tag}]}
+    $.ajax({url:"/cards/"+this.link+"/tags/",
+        type:'POST',
+        contentType:'application/json',
+        dataType:'json',
+        data:JSON.stringify(newTag),
+        success: function(data){
+                    if(callback){
+                        callback();
+                    }
+                },
+        error: function(data){
+            console.log(data);
+            if(callback){
+                callback();
+            }
+        }
+        });
 };
 
-Card.prototype.tagClicked = function(tag){
+Card.prototype.tagClicked = function(tag, callback){
+    console.log(this);
     console.log(tag);
+    var that = this;
+    $.ajax({url:"/tags/"+tag,
+        type:'GET',
+        success: function(data){
+                    console.log(data);
+                    var syntheticCardContent = "<h1>Tag: {0}</h1><p><ul>{1}</ul></p>";
+                    var listOfCards = ""
+                    data.cards.forEach(function(element, index, array){
+                        if(element.display_title)
+                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard(this, {0})'>{1}</a></li>".format(element.link, element.display_title);
+                        else
+                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard(this, {0})'>{1}</a></li>".format(element.link, element.link);
+                    });
+                    console.log(listOfCards);
+                    syntheticCardContent = syntheticCardContent.format(data.tag, listOfCards);
+                    //console.log(syntheticCardContent);
+                    console.log(listOfCards);
+                    //var cardHtml = Card.card_template_synthetic_card.format("tag_"+tag, syntheticCardContent);
+                    var cardOfTags = new Card({link:"__Tag_"+tag,display_title:"Tag: " + tag, content:syntheticCardContent, rendered_content:syntheticCardContent, edited_at:null, edited_by:'anonymous',version:1}, true, that.parent)
+                    console.log(cardOfTags);
+                    that.parent.addCard(that.link, cardOfTags, false);
+                    if(callback){
+                        callback();
+                    }
+                },
+        error: function(data){
+            console.log(data);
+            if(callback){
+                callback();
+            }
+        }
+        });
 }

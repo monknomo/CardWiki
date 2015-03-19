@@ -25,7 +25,7 @@ Check out our documentation at our websites
 
 Use [[wikilinks]] to make new cards"""
             rendered_content = markdown.markdown(content,
-                                                 extensions=[WikiLinkExtension(base_url='')])
+                                                 extensions=[WikiLinkExtension(base_url='', card_link="__startCard")])
 
             card = db.Card(display_title="",
                            link="__startCard",

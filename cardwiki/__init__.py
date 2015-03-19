@@ -33,13 +33,13 @@ class UndeletableAttributeException(Exception):
         return repr(self.value)
         
 class Card(collections.UserDict):
-    _keys = ['link','display_title','version','content','rendered_content','edited_by']
+    _keys = ['link','display_title','version','content','rendered_content','edited_by','status']
     
     def __init__(self, link="", display_title=None, version=None, content=None, rendered_content=None, edited_by=None, json_dict=None):
         collections.UserDict.__init__(self)
         if json_dict:
             formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
-            rendered_content = markdown.markdown(json_dict['content'], extensions=[WikiLinkExtension(base_url='')])
+            rendered_content = markdown.markdown(json_dict['content'], extensions=[WikiLinkExtension(base_url='', card_link=json_dict['link'])])
             try:
                 version = json_dict['version']
                 if version:
@@ -62,7 +62,7 @@ class Card(collections.UserDict):
                 link = self.derive_title_link(display_title)
             if content and not rendered_content:
                 formatted_url = ['wikilinks(base_url={0}cards/)'.format(BASE_URL)]
-                rendered_content = markdown.markdown(json_dict['content'], formatted_url)
+                rendered_content = markdown.markdown(json_dict['content'], extensions=[WikiLinkExtension(base_url='', card_link=link)])
             if version:
                 version = int(version)
             self.data = {"link":link,
@@ -333,7 +333,7 @@ def find_cards_for_tag(tag, session):
     """
     tags = session.query(db.CardTag.tagged_card).filter(db.CardTag.tag == tag)
     cards = session.query(db.Card).filter(db.Card.id.in_(tags)).all()
-    result = {"cards":[]}
+    result = {"cards":[], "tag":tag}
     for card in cards:
         card_dict = card.to_dict()
         card_dict['href'] = '{0}cards/{1}'.format(BASE_URL, card_dict['link'])

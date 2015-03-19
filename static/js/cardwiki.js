@@ -477,9 +477,9 @@ Card.prototype.tagClicked = function(tag, callback){
                     var listOfCards = ""
                     data.cards.forEach(function(element, index, array){
                         if(element.display_title)
-                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard(this, {0})'>{1}</a></li>".format(element.link, element.display_title);
+                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard('__Tag_{0}', '{0}')'>{1}</a></li>".format(element.link, element.display_title);
                         else
-                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard(this, {0})'>{1}</a></li>".format(element.link, element.link);
+                            listOfCards += "<li><a href='#cards_{0}' onClick='appendCard('__Tag_{0}', '{0}')'>{1}</a></li>".format(element.link, element.link);
                     });
                     console.log(listOfCards);
                     syntheticCardContent = syntheticCardContent.format(data.tag, listOfCards);

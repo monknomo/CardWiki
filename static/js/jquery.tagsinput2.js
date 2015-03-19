@@ -93,17 +93,32 @@
 				}
 				
 				if (value !='' && skipTag != true) { 
-                    $('<span>').addClass('tag').append(
-                        $('<span>').text(value).append('&nbsp;&nbsp;'),
-                        $('<a>', {
-                            href  : '#',
-                            title : 'Removing tag',
-                            text  : 'x'
-                        }).click(function () {
-                            return $('#' + id).removeTag(escape(value));
-                        })
-                    ).insertBefore('#' + id + '_addTag');
-
+                    if(tags_callbacks[id] && tags_callbacks[id]['onClickTag']){
+                        $('<span>').click(function(){
+                            var f = tags_callbacks[id]['onClickTag'];
+                            f.call(this, value);
+                            }).addClass('tag').append(
+                            $('<span>').text(value).append('&nbsp;&nbsp;'),
+                            $('<a>', {
+                                href  : '#',
+                                title : 'Removing tag',
+                                text  : 'x'
+                            }).click(function () {
+                                return $('#' + id).removeTag(escape(value));
+                            })
+                        ).insertBefore('#' + id + '_addTag');
+                    }else{
+                        $('<span>').addClass('tag').append(
+                            $('<span>').text(value).append('&nbsp;&nbsp;'),
+                            $('<a>', {
+                                href  : '#',
+                                title : 'Removing tag',
+                                text  : 'x'
+                            }).click(function () {
+                                return $('#' + id).removeTag(escape(value));
+                            })
+                        ).insertBefore('#' + id + '_addTag');
+                    }
 					tagslist.push(value);
 				
 					$('#'+id+'_tag').val('');

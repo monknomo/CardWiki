@@ -162,16 +162,16 @@ CardWiki.prototype.cancelEditCard = function(link){
     this.cards[link].viewMode(this);;
 }
 
-CardWiki.prototype.removeCard = function(link){
-    //var title = obj.id.substring(11);
+CardWiki.prototype.removeCard = function(cardSelector){
+    var link = cardSelector.id.substring(5);
     if(this.cards[link]){
-        $("#card_"+link).remove();
+        cardSelector.remove();
         this.editors[link] = null;
         this.cards[link] = null;
     }else{
-        $("#card_"+link).remove();
+        cardSelector.remove();
         this.editors[link] = null;
-        this.cards[link] = null;
+        this.syntheticCards[link] = null;
     }
 
 

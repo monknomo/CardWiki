@@ -163,7 +163,7 @@ CardWiki.prototype.cancelEditCard = function(link){
 }
 
 CardWiki.prototype.removeCard = function(cardSelector){
-    var link = cardSelector.id.substring(5);
+    var link = cardSelector[0].id.substring(5);
     if(this.cards[link]){
         cardSelector.remove();
         this.editors[link] = null;

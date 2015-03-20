@@ -1,16 +1,27 @@
+div.card.jumbotron {
+    padding-top:1.25em;
+    padding-right: 1em;
+    padding-left: 1em;
+    margin-bottom: 1.5em;
+}
+
+div.card.jumbotron p {
+    font-size: medium;
+}
+
 span.card_title > h1, span.card_title * h1 {
-	font-size:4em;
+	font-size:x-large;
 }
 
 div.card_content > h1, div.card_content * h1 {
-	font-size:3em;
+	font-size:large;
 }
 
 div.card_title_holder {
 	    border-bottom: .22em grey solid;
 		padding-bottom: .5em;
         float:left;
-        width:95%;
+        width:100%;
 }
 
 span.cardTitleEditor{

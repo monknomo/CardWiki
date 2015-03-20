@@ -11,9 +11,9 @@ String.prototype.format = String.prototype.f = function() {
 $.fn.goTo = function() {
     console.log("scrolling to top");
     console.log($(this).offset().top);
-    console.log($(document).height());
+    console.log($("#cardwiki-navbar-collapse-1").height());
     $('html, body').animate({
-        scrollTop: $(this).offset().top
+        scrollTop: $(this).offset().top - $("#cardwiki-navbar-collapse-1").height()
     }, 'fast');
     return this; // for chaining...
 }
@@ -85,9 +85,7 @@ CardWiki.prototype.getCard = function(currentCardSelector, link, callback){
                             }else{
                                 that.addCard(currentCardSelector, card, false);    
                             }
-                        if(callback){
-                            callback();
-                        }   
+                        that.getTags(link, callback);
                     },
                 error: function(data){
                     that.cards[link] = "error";
@@ -223,7 +221,7 @@ CardWiki.prototype.saveCard = function(link, callback){
                         that.cards[link] = card;
                         card.viewMode(that);;
                         if(that.editors[link]!=null){   
-                            that.editors[link].unload();
+                            that.editors[link].unload(function(){that.editors[link].remove('cardWiki_' + link)});
                             delete that.editors[link];                                      
                         }
                     } else {
@@ -249,7 +247,8 @@ CardWiki.prototype.getTags = function(cardLink, callback){
             type:'GET',
             dataType:'json',
             success: function(data){
-                $('#tagsBox_' + cardLink + ' > input').importTags('');
+                var tagInput = $('#tagsBox_' + cardLink + ' > input');
+                tagInput.importTags('');
                 if(data.tags == null || data.tags.length < 1){
                     //do nothing
                 }else{
@@ -262,7 +261,7 @@ CardWiki.prototype.getTags = function(cardLink, callback){
                             tagVals = tagVals + "," + this.tags[i].tag;
                         }
                     }
-                    $('#tagsBox_' + cardLink + ' > input').importTags(tagVals);	                 
+                    tagInput.importTags(tagVals);	                 
                 }
                 if(callback){
                     callback();

@@ -7,7 +7,7 @@ import unittest
 import copy
 import markdown
 from cardwiki.wikilinks import WikiLinkExtension
-
+        
 class MockCardRequest:
     def __init__(self):
         self.json = {'link': "json_test_title",
@@ -129,6 +129,35 @@ Check out our documentation at our websites</p>
 <p>Use <a class="wikilink" href="#card_wikilinks" onClick="appendCard(&quot;__startCard&quot;, &quot;wikilinks&quot;)">wikilinks</a> to make new cards</p>"""
         self.assertEqual(expected, rendered_content)
 
+    def test_handleMatch_internal_link(self):
+        content = "[[testlink]]"
+        rendered_content = markdown.markdown(content,
+                                             extensions=[WikiLinkExtension(base_url='', card_link='__startCard')])
+        expected = "<p><a class=\"wikilink\" href=\"#card_testlink\" onClick=\"appendCard(&quot;__startCard&quot;, &quot;testlink&quot;)\">testlink</a></p>"
+        self.assertEqual(expected, rendered_content)
+    
+    def test_handleMatch_renamed_internal_link(self):
+        content = "[[testlink | anotherLink]]"
+        rendered_content = markdown.markdown(content,
+                                             extensions=[WikiLinkExtension(base_url='', card_link='__startCard')])
+        
+        expected = "<p><a class=\"wikilink\" href=\"#card_anotherLink\" onClick=\"appendCard(&quot;__startCard&quot;, &quot;anotherLink&quot;)\">testlink</a></p>"
+        self.assertEqual(expected, rendered_content)
+        
+        
+    def test_handle_markdown_external_link(self):
+        content = "[testlink](http://www.google.com)"
+        rendered_content = markdown.markdown(content,
+                                             extensions=[WikiLinkExtension(base_url='', card_link='__startCard')])
+        expected = "<p><a href=\"http://www.google.com\">testlink</a></p>"
+        self.assertEqual(expected, rendered_content)
+        
+    def test_handleMatch_with_spaces(self):
+        content = "[[test link]]"
+        rendered_content = markdown.markdown(content,
+                                             extensions=[WikiLinkExtension(base_url='', card_link='__startCard')])
+        expected = "<p><a class=\"wikilink\" href=\"#card_test_link\" onClick=\"appendCard(&quot;__startCard&quot;, &quot;test_link&quot;)\">test link</a></p>"
+        self.assertEqual(expected, rendered_content)
         
 class TestCardwikiFunctions(unittest.TestCase):
 

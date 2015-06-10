@@ -53,30 +53,29 @@ class WikiLinks(Pattern):
   
     def handleMatch(self, m):
         if m.group(2).strip():
-            print("%%%%%%%%%%%%%%%%%")
-            print(self._getMeta())
             base_url, end_url, html_class, card_link = self._getMeta()
             wl = m.group(2).strip()
             wl_pair = wl.split("|", 1)
-            print(wl_pair)
             if len(wl_pair) == 2:
                 #matches things like [[description | http://www.website.com]]
                 #display = re.sub(r'\|', '', wl_pair[1].strip())
-                label = wl_pair[0].strip()
-                url = wl_pair[1].strip()
+                label = wl_pair[1].strip()
+                label = re.sub(r'([ ]+)', '_', label)
+                display = wl_pair[0].strip()
+                url = self.config['build_url'](wl_pair[1].strip(),base_url,end_url)
                 #url = self.config['build_url'](label, base_url, end_url)
-                a = self._getExternalLink(label, url)
+                a = self._getInternalLink(display, label, url)
             elif len(wl_pair) == 1:
                 label = wl_pair[0].strip()
                 display = label
                 url = self.config['build_url'](label, base_url, end_url)
-                label = re.sub(r'([ ]+)', '%20', label)
+                label = re.sub(r'([ ]+)', '_', label)
                 a = self._getInternalLink(display, label, url)
             else:
                 label = m.group(2).strip()
                 display = label
                 url = self.config['build_url'](label, base_url, end_url)
-                label = re.sub(r'([ ]+)', '%20', label)
+                label = re.sub(r'([ ]+)', '_', label)
                 a = self._getInternalLink(display, label, url)
         else:
             a = ''

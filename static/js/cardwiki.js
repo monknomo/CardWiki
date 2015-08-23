@@ -42,6 +42,7 @@ function CardWiki(){
             this.editors = [];
             this.username = null;
             this.password = null;
+            this.siteRoot = '/'
         }
         
 CardWiki.prototype.getCard = function(currentCardSelector, link, callback){
@@ -330,7 +331,8 @@ function listAllCards(){
     this.synthetic = synthetic
     this.parent = parent;
 }
-        
+
+//This is for normal cards with a title.  Most cards are of this type        
 Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>"+
                             "<div class='card_title_holder'>" +
                                 "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>" +
@@ -351,6 +353,7 @@ Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='open
                             "</div>"+
                         "</div>";
 
+//this is for special cards without a title, like the __startCard
 Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>" +
                                         "<div>"+
                                             "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>" +
@@ -366,6 +369,7 @@ Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card' ondbl
                                         "</p></div>"+
                                     "</div>";
 
+//this is for displaying information that isn't stored in cards as though it were a card
 Card.card_template_synthetic_card = "<div id='card_{0}' class='jumbotron card synthetic'>" +
                                         "<div>"+
                                             "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>" +

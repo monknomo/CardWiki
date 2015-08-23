@@ -46,9 +46,9 @@
 		  });
           $("#admin").hide();
           $("#queryDisplay").hide();
-          cw.getCard(null, "__startCard", function(){
+          //cw.getCard(null, "__startCard", function(){
             //cw.getTags("__startCard");          
-          });
+          //});
 		});
       
         function openEditor_dblclick(card){
@@ -122,7 +122,54 @@
 		</div><!-- /.navbar-collapse -->
 	  </div><!-- /.container-fluid -->
 	</div>
-	<div id="cardList" class="container">		
+	<div id="cardList" class="container">	
+        {% for card in cards %}
+            bang
+            {% if card.display_title in defined %}
+            <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
+                <div class='card_title_holder'>
+                    <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>
+                    <span id='title_{{card.link}}' class='card_title'><h1>{{card.display_title}}</h1></span>
+                    <span id='titleEditor_{{card.link}}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{{card.link}}' type='text' class='form-control'value='{{card.display_title}}'></input></span>
+                </div>                            
+                <div style='height:1em;width:100%;clear:both;'></div>
+                <div id='announcements_{{card.link}}' class='announcements'></div>
+                {% if card.rendered_content is not none%}
+                    <div id='content_{{card.link}}' class='card_content'>{{card.rendered_content}}</div>
+                {% else %}
+                    <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
+                {% endif %}
+                <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
+                <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;'><input id='tags_{{card.link}}' type='text' ></input></div> 
+                <div><p class='card-control-buttons'>
+                    <a id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>
+                    <a id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>
+                    <a id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>
+                    </p>
+                </div>
+            </div>
+            {% else %}
+                no title
+                <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
+                    <div>
+                        <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>
+                    <div style='height:1em;clear:both;'></div>
+                    <div id='announcements_{{card.link}}' class='announcements'></div>
+                    {% if card.rendered_content is defined %}
+                        <div id='content_{{card.link}}' class='card_content'>{{card.rendered_content}}</div>
+                    {% else %}
+                        <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
+                    {% endif %}
+                    <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
+                    <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;width:100%'><input id='tags_{{card.link}}' type='text' ></input></div>
+                    <div style='clear:both;'><p class='card-control-buttons'>
+                        <a id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>
+                        <a id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>
+                        <a id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>
+                    </p></div>
+                </div>
+            {% endif %}
+        {% endfor %}
 	</div><!-- /container -->
 	<div id="admin" class="container">
 		<form role="form">

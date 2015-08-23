@@ -10,8 +10,12 @@ from cardwiki.wikilinks import WikiLinkExtension
 from cardwiki import Card
 import re
 from passlib.hash import bcrypt
+from jinja2 import Environment, PackageLoader
 
 base_url = "/"
+
+
+env = Environment(loader=PackageLoader('cardwiki', 'templates'))
 
 def require_authentication(func):
     def check_auth(*args, **kwargs):
@@ -67,7 +71,29 @@ def login():
 
 @get('{0}'.format(base_url))
 def get_index():
-    return static_file('index.html', root='.')
+    print(request.query.cards)
+    card_titles=[]
+    cards=[]    
+    print(request.query.cards)
+    if request.query.cards is not None and len(request.query.cards) > 0:
+        print("splitting")
+        card_titles = request.query.cards.split(",")
+    else:
+        print("appending")
+        card_titles.append("__startCard")
+    print(card_titles)
+    with session_scope() as session:
+        for card_title in card_titles:
+            card = cardwiki.get_newest_card(card_title, session)
+            print(card)
+            if(card is not None):
+                cards.append(Card(display_title=card_title))
+            else:
+                cards.append
+    print(cards)
+    template =  env.get_template('index.html')
+    return template.render(cards=cards)
+    #return static_file('index.html', root='.')
 
 @get('{0}static/<filename:path>'.format(base_url))
 def get_static(filename):

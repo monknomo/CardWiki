@@ -29,9 +29,27 @@
     <script type="text/javascript" src="static/js/cardwiki.js"></script>
 	<script>
         cw = new CardWiki();
-        
+        (function($) {
+            $.QueryString = (function(a) {
+                if (a == "") return {};
+                var b = {};
+                for (var i = 0; i < a.length; ++i)
+                {
+                    var p=a[i].split('=');
+                    if (p.length != 2) continue;
+                    b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
+                }
+                return b;
+            })(window.location.search.substr(1).split('&'))
+        })(jQuery);
         
 		$(function() {
+            if(Object.keys($.QueryString).length==0){
+                alert("no params");
+                loadRenderedCards();
+            }else{
+                alert("params");
+            }
 		  $('a[href*=#]:not([href=#])').click(function() {
 			if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
 			  var target = $(this.hash);
@@ -50,6 +68,12 @@
             //cw.getTags("__startCard");          
           //});
 		});
+        
+        function loadRenderedCards(){
+            $("#cardList > .card").each(function(){
+                console.log(this);
+            });
+        }
       
         function openEditor_dblclick(card){
             cw.editCard(card.id.substring(5));

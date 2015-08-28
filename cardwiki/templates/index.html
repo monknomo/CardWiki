@@ -72,6 +72,8 @@
         function loadRenderedCards(){
             $("#cardList > .card").each(function(){
                 console.log(this);
+                console.log(this.id.substring(5));
+                console.log($("#hiddenContent_"+this.id.substring(5)).text());
             });
         }
       
@@ -148,7 +150,6 @@
 	</div>
 	<div id="cardList" class="container">	
         {% for card in cards %}
-            bang
             {% if card.display_title in defined %}
             <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
                 <div class='card_title_holder'>
@@ -162,6 +163,11 @@
                     <div id='content_{{card.link}}' class='card_content'>{{card.rendered_content}}</div>
                 {% else %}
                     <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
+                {% endif %}
+                {% if card.content is not none %}
+                    <div id='hiddenContent_{{card.link}}' style='display:none;'>{{card.content}}</div>
+                {% else %}
+                    <div id='hiddenContent_{{card.link}}' style='display:none;'></div>
                 {% endif %}
                 <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
                 <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;'><input id='tags_{{card.link}}' type='text' ></input></div> 
@@ -179,10 +185,15 @@
                         <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>
                     <div style='height:1em;clear:both;'></div>
                     <div id='announcements_{{card.link}}' class='announcements'></div>
-                    {% if card.rendered_content is defined %}
+                    {% if card.rendered_content is not none%}
                         <div id='content_{{card.link}}' class='card_content'>{{card.rendered_content}}</div>
                     {% else %}
                         <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
+                    {% endif %}
+                    {% if card.content is not none %}
+                        <div id='hiddenContent_{{card.link}}' style='display:none;'>{{card.content}}</div>
+                    {% else %}
+                        <div id='hiddenContent_{{card.link}}' style='display:none;'></div>
                     {% endif %}
                     <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
                     <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;width:100%'><input id='tags_{{card.link}}' type='text' ></input></div>

@@ -71,28 +71,22 @@ def login():
 
 @get('{0}'.format(base_url))
 def get_index():
-    print(request.query.cards)
     card_titles=[]
-    cards=[]    
-    print(request.query.cards)
+    cards0=[]    
     if request.query.cards is not None and len(request.query.cards) > 0:
-        print("splitting")
         card_titles = request.query.cards.split(",")
     else:
-        print("appending")
         card_titles.append("__startCard")
     print(card_titles)
     with session_scope() as session:
         for card_title in card_titles:
             card = cardwiki.get_newest_card(card_title, session)
-            print(card)
-            if(card is not None):
-                cards.append(Card(display_title=card_title))
+            if card:
+                cards0.append(card)                
             else:
-                cards.append
-    print(cards)
+                cards0.append(Card(display_title=card_title))
     template =  env.get_template('index.html')
-    return template.render(cards=cards)
+    return template.render(cards=cards0)
     #return static_file('index.html', root='.')
 
 @get('{0}static/<filename:path>'.format(base_url))

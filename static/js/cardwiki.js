@@ -80,7 +80,6 @@ CardWiki.prototype.getCard = function(currentCardSelector, link, callback){
                 success: function(data){
                         console.log(data);                            
                             var card = new Card(data, false, that);
-                            
                             if(data.content == null){
                                 that.addCard(currentCardSelector, card, true);    
                             }else{

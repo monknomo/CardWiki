@@ -85,8 +85,8 @@ class WikiLinks(Pattern):
         base_url, end_url, html_class, card_link = self._getMeta()
         a = etree.Element('a')
         a.text = display
-        a.set('href', '#card_' + label)
-        a.set('onClick', "appendCard(\""+card_link+"\", \""+url+"\")") 
+        a.set('href', '?cards=' + label )
+        a.set('onClick', "appendCard(event, \""+card_link+"\", \""+url+"\")") 
         if html_class:
                 a.set('class', html_class)
         return a

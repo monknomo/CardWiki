@@ -77,7 +77,6 @@ def get_index():
         card_titles = request.query.cards.split(",")
     else:
         card_titles.append("__startCard")
-    print(card_titles)
     with session_scope() as session:
         for card_title in card_titles:
             card = cardwiki.get_newest_card(card_title, session)
@@ -86,6 +85,7 @@ def get_index():
             else:
                 cards0.append(Card(display_title=card_title))
     template =  env.get_template('index.html')
+    print(cards0)
     return template.render(cards=cards0)
     #return static_file('index.html', root='.')
 

@@ -29,19 +29,6 @@
     <script type="text/javascript" src="static/js/cardwiki.js"></script>
 	<script>
         cw = new CardWiki();
-        (function($) {
-            $.QueryString = (function(a) {
-                if (a == "") return {};
-                var b = {};
-                for (var i = 0; i < a.length; ++i)
-                {
-                    var p=a[i].split('=');
-                    if (p.length != 2) continue;
-                    b[p[0]] = decodeURIComponent(p[1].replace(/\+/g, " "));
-                }
-                return b;
-            })(window.location.search.substr(1).split('&'))
-        })(jQuery);
         
 		$(function() {
 
@@ -79,14 +66,17 @@
                 $.ajax({url:'/cards/' + link, 
                         type:'GET', 
                         dataType:'json',
-                        success: function(data){
-                                console.log(data);                            
+                        success: function(data){                          
                                     var card = new Card(data, false, cw);
-                                        cw.cards[link] = card;
-                                        
+                                    cw.cards[card.link] = card;
+                                    if(card.content === ""){
+                                        cw.editCard(card.link);                       
+                                        $("#card_"+link).attr("ondblclick",'openEditor_dblclick(this)');
+                                    }else{
                                         card.viewMode();
                                         $("#card_"+link).attr("ondblclick",'openEditor_dblclick(this)');
-                                cw.getTags(link, null);
+                                        cw.getTags(link, null);
+                                    }
                             },
                         error: function(data){
                         }
@@ -114,8 +104,10 @@
             cw.cancelEditCard(card.id.substring(21));
         };
         
-        function appendCard(cardId, link){
-            cw.getCard($("#card_"+cardId), link);
+        function appendCard(event, card, link){
+            event.preventDefault();
+            console.log($("#card_"+card));
+            cw.getCard($("#card_"+card), link);
         }
         
         function openAndGotoStartCard(){
@@ -167,7 +159,7 @@
 	</div>
 	<div id="cardList" class="container">	
         {% for card in cards %}
-            {% if card.display_title in defined %}
+            {% if card.display_title != None %}
             <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
                 <div class='card_title_holder'>
                     <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>

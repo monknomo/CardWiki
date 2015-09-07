@@ -44,12 +44,9 @@
         })(jQuery);
         
 		$(function() {
-            if(Object.keys($.QueryString).length==0){
-                alert("no params");
-                loadRenderedCards();
-            }else{
-                alert("params");
-            }
+
+          loadRenderedCards();
+
 		  $('a[href*=#]:not([href=#])').click(function() {
 			if (location.pathname.replace(/^\//,'') == this.pathname.replace(/^\//,'') && location.hostname == this.hostname) {
 			  var target = $(this.hash);
@@ -75,37 +72,25 @@
                 console.log(this.id.substring(5));
                 console.log($("#hiddenContent_"+this.id.substring(5)).text());
                 var link = this.id.substring(5);
-               
-        var that = this;
-        cw.cards[link] = "loading";
-        $.ajax({url:'/cards/' + link, 
-                type:'GET', 
-                dataType:'json',
-                success: function(data){
-                        console.log(data);                            
-                            var card = new Card(data, false, cw);
-                                cw.cards[link] = card;
-                                card.viewMode();
-                        cw.getTags(link, null);
-                    },
-                error: function(data){
-
-                }
-            });             
-                
-                
-                
-                
-                
-                //var cardLink = this.id.substring(5);
-                //var titleSpanText = $("span#title_"+cardLink).text();
-                //var jsonData = {link:cardLink,
-                //                   rendered_content:$("#content_"+cardLink).html(),
-                //                    content:$("#hiddenContent_"+cardLink).text(),
-                //                    display_title:titleSpanText};
-                //console.log(jsonData);
-                //var c = new Card(jsonData, false, cw);
-                //cw.cards.append(c);
+                $("#editButton_"+link).hide();
+                $("#card_"+link).attr("ondblclick",null);
+                var that = this;
+                cw.cards[link] = "loading";
+                $.ajax({url:'/cards/' + link, 
+                        type:'GET', 
+                        dataType:'json',
+                        success: function(data){
+                                console.log(data);                            
+                                    var card = new Card(data, false, cw);
+                                        cw.cards[link] = card;
+                                        
+                                        card.viewMode();
+                                        $("#card_"+link).attr("ondblclick",'openEditor_dblclick(this)');
+                                cw.getTags(link, null);
+                            },
+                        error: function(data){
+                        }
+                    });     
             });
         }
       
@@ -196,11 +181,6 @@
                 {% else %}
                     <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
                 {% endif %}
-                {% if card.content is not none %}
-                    <div id='hiddenContent_{{card.link}}' style='display:none;'>{{card.content}}</div>
-                {% else %}
-                    <div id='hiddenContent_{{card.link}}' style='display:none;'></div>
-                {% endif %}
                 <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
                 <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;'><input id='tags_{{card.link}}' type='text' ></input></div> 
                 <div><p class='card-control-buttons'>
@@ -211,7 +191,6 @@
                 </div>
             </div>
             {% else %}
-                no title
                 <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
                     <div>
                         <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>
@@ -222,14 +201,7 @@
                     {% else %}
                         <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
                     {% endif %}
-                    <div class="hiddenAdminStuff" style="display:none;">
-                    {% if card.content is not none %}
-                        <div id='hiddenContent_{{card.link}}' style='display:none;'>{{card.content}}</div>
-                    {% else %}                        
-                        <div id='hiddenContent_{{card.link}}' style='display:none;'></div>
-                    {% endif %}
-                        <div
-                    </div>
+                    <div class="hiddenAdminStuff" style="display:none;"></div>
                     <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
                     <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;width:100%'><input id='tags_{{card.link}}' type='text' ></input></div>
                     <div style='clear:both;'><p class='card-control-buttons'>

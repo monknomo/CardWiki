@@ -334,38 +334,44 @@ function listAllCards(){
 //This is for normal cards with a title.  Most cards are of this type        
 Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>"+
                             "<div class='card_title_holder'>" +
-                                "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>" +
                                 "<span id='title_{0}' class='card_title'><h1>{2}</h1></span>" +
-                                "<span id='titleEditor_{0}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{0}' type='text' class='form-control'value='{2}'></input></span>" +
+                                "<span id='titleEditor_{0}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{0}' type='text' class='form-control'value='{2}'></input></span>" +                                
+                                "<span class='card-control-buttons'>"+
+                                    "<button id='removeCard_{0}' type='button' class='btn btn-sm btn-danger hideCardButton' onclick='removeCard(this)'><span class='glyphicon glyphicon-remove'></span></button>" +
+                                    "<button id='editButton_{0}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</button>"+
+                                    "<button id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</button>"+
+                                    "<button id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</button>"+                                    
+                                "</span>" + 
                             "</div>" +
                             //"<hr>" +
                             "<div style='height:1em;width:100%;clear:both;'></div>"+	
                             "<div id='announcements_{0}' class='announcements'></div>"+
                             "<div id='content_{0}' class='card_content'>{1}</div>"+
                             "<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
-                            "<div id='tagsBox_{0}' style='margin-bottom:.5em;'><input id='tags_{0}' type='text' ></input></div> " +
-                            "<div><p class='card-control-buttons'>"+
-                                "<a id='editButton_{0}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>"+
-                                "<a id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>"+
-                                "<a id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>"+
-                                "</p>" +
+                            "<div class='cardBottomControls'>"+
+                                "<div id='tagsBox_{0}' style='margin-bottom:.5em;'><input id='tags_{0}' type='text' ></input></div> " +
+                                "<button id='deleteCardButton){0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
                             "</div>"+
                         "</div>";
 
 //this is for special cards without a title, like the __startCard
-Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>" +
+Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card sanstitle' ondblclick='openEditor_dblclick(this)'>" +
                                         "<div>"+
-                                            "<button id='removeCard_{0}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>" +
+                                            "<span class='card-control-buttons'>"+
+                                                "<button id='removeCard_{0}' type='button' class='btn btn-sm btn-danger hideCardButton sanstitle' onclick='removeCard(this)'><span class='glyphicon glyphicon-remove'></span></button>" +
+                                                "<button id='editButton_{0}' class='btn btn-primary btn-sm editCardButton sanstitle' role='button' onclick='openEditor(this)'>Edit</button>"+
+                                                "<button id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton sanstitle' role='button' onclick='saveCard(this)'>Save</button>"+
+                                                "<button id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton sanstitle' role='button' onclick='cancelEdit(this)'>Cancel</button>"+                                    
+                                            "</span>" +
                                         "<div style='height:1em;clear:both;'></div>" +
                                         "<div id='announcements_{0}' class='announcements'></div>"+
                                         "<div id='content_{0}' class='card_content' >{1}</div>"+
                                         "<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
-                                        "<div id='tagsBox_{0}' style='margin-bottom:.5em;width:100%'><input id='tags_{0}' type='text' ></input></div> " +
-                                        "<div style='clear:both;'><p class='card-control-buttons'>"+
-                                            "<a id='editButton_{0}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>"+
-                                            "<a id='saveButton_{0}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>"+
-                                            "<a id='cancelCardEditButton_{0}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>"+
-                                        "</p></div>"+
+                                        "<div class='cardBottomControls'>"+
+                                            "<div id='tagsBox_{0}' style='margin-bottom:.5em;width:100%'><input id='tags_{0}' type='text' ></input></div> " +
+                                            "<button id='deleteCardButton){0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
+                                        "</div>"+
+
                                     "</div>";
 
 //this is for displaying information that isn't stored in cards as though it were a card
@@ -394,14 +400,15 @@ Card.prototype.viewMode = function(){
     //card_'+this.link).show();
     var cardlink = this.link;
     $("div#content_"+ this.link).html(this.rendered_content);
-    $('a#saveButton_'+this.link).hide();
-    $('a#cancelCardEditButton_'+this.link).hide();
+    $('button#saveButton_'+this.link).hide();
+    $('button#cancelCardEditButton_'+this.link).hide();
     $('span#titleEditor_'+this.link).hide();
     $("span#title_"+ this.link).show();
     $("div#content_"+ this.link).show();
-    $("a#editButton_"+ this.link).show();
+    $("button#editButton_"+ this.link).show();
     $("div#editor_"+this.link).hide();
     $('div#card_'+this.link).show();
+    $("#removeCard_"+this.link).show();
     $("div#card_"+this.link).waitUntilExists(function(){$("div#card_"+cardlink).goTo()});
     var taggedCardTitle = this.link;
     if(!$('#tags_' + this.link + "_tagsinput").length){
@@ -423,10 +430,12 @@ Card.prototype.editMode = function(){
     $("#title_"+ this.link).hide();
     $("#titleEditor_"+ this.link).show();
     $("#content_"+ this.link).hide();
-    $("#editButton_"+ this.link).hide();
-    $("#saveButton_"+ this.link).show();
-    $("#cancelCardEditButton_"+ this.link).show();    
+    $("button#editButton_"+ this.link).hide();
+    $("button#removeCard_"+this.link).hide();
+    $("button#saveButton_"+ this.link).show();
+    $("button#cancelCardEditButton_"+ this.link).show();    
     $("#editor_"+this.link).show();
+    
     var cardSelector = $("div#card_"+this.link)
     //if(cardSelector.length>0){
     //    if(this.content=""){
@@ -435,6 +444,7 @@ Card.prototype.editMode = function(){
     //}else{
         cardSelector.waitUntilExists(function(){cardSelector.goTo()});
     //}
+
 };
 
 Card.prototype.deleteTag = function(tag, callback){

@@ -1,31 +1,78 @@
 div.card.jumbotron {
-    padding-top:1.25em;
-    padding-right: 1em;
-    padding-left: 1em;
-    margin-bottom: 1.5em;
+    padding-top:1em;
+    padding-right: .75em;
+    padding-left: .75em;
+    margin-bottom: 1.25em;
 }
 
+@media screen and (min-width: 768px) {
+  .jumbotron.card {
+    padding-top: 48px;
+    padding-bottom: .5em;
+  }
+
+div.card.sanstitle {
+    background-color:#FAF2AD;
+}
+  
 div.card.jumbotron p {
-    font-size: medium;
+    font-size: small;
+    margin:.2em;
+}
+
+div.card_title_holder {
+	    border-bottom: .15em grey solid;
+		/*padding-bottom: .5em;*/
+        float:left;
+        width:100%;
+}
+span.card_title{
+     width:80%;
+     float:left;
 }
 
 span.card_title > h1, span.card_title * h1 {
-	font-size:x-large;
+	font-size:xx-large;
+    margin:0em;
+   
 }
+span.card-control-buttons{
+    float:right;
+    width:20%;
+    margin:0em;
+}
+span.cardTitleEditor{
+    float:left;
+}
+
+button.deleteCardButton{
+    float:right;
+}
+
+button.hideCardButton{
+    float:right;
+    margin-right:.5em;
+}
+
+.card-control-buttons > button{
+    float:right;
+    margin-left:.1em;
+    margin-right:.1em;
+    
+}
+button.sanstitle{
+    margin-bottom:.4em;
+}
+
 
 div.card_content > h1, div.card_content * h1 {
 	font-size:large;
 }
 
-div.card_title_holder {
-	    border-bottom: .22em grey solid;
-		padding-bottom: .5em;
-        float:left;
-        width:100%;
-}
 
-span.cardTitleEditor{
-    float:left;
+
+div.cardBottomControls{
+    overflow:auto;
 }
 
 a.externalLink{
@@ -38,4 +85,7 @@ span.card_title{
 
 span.cardTitleEditor{
     display:inline;
+}
+
+
 }

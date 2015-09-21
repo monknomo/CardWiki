@@ -70,7 +70,18 @@
                                     var card = new Card(data, false, cw);
                                     cw.cards[card.link] = card;
                                     if(card.content === ""){
-                                        cw.editCard(card.link);                       
+                                        cw.editCard(card.link); 
+                                        if(!$('#tags_' + card.link + "_tagsinput").length){
+                                            
+                                            $('#tags_' + card.link).tagsInput({
+                                                height:'100%',
+                                                width:'85%',
+                                                overwriteTagInput: false,
+                                                onRemoveTag:function(tag){card.deleteTag(tag);},
+                                                onAddTag:function(tag){card.addTag(tag);},
+                                                onClickTag:function(tag){card.tagClicked(tag);}
+                                            });
+                                        }                                        
                                         $("#card_"+link).attr("ondblclick",'openEditor_dblclick(this)');
                                     }else{
                                         card.viewMode();
@@ -89,7 +100,7 @@
         };
         
         function removeCard(card){
-            cw.removeCard($(card).parent().parent());            
+            cw.removeCard($(card).parent().parent().parent());            
         };
         
         function openEditor(card){
@@ -159,12 +170,17 @@
 	</div>
 	<div id="cardList" class="container">	
         {% for card in cards %}
-            {% if card.display_title != None %}
+            {% if card.display_title != None and card.display_title != "" %}
             <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
                 <div class='card_title_holder'>
-                    <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button>
                     <span id='title_{{card.link}}' class='card_title'><h1>{{card.display_title}}</h1></span>
                     <span id='titleEditor_{{card.link}}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{{card.link}}' type='text' class='form-control'value='{{card.display_title}}'></input></span>
+                    <span class='card-control-buttons'>
+                        <button id='removeCard_{{card.link}}' type='button' class='btn btn-sm btn-danger hideCardButton sanstitle' onclick='removeCard(this)'><span class='glyphicon glyphicon-remove'></span></button>
+                        <button id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton sanstitle' role='button' onclick='openEditor(this)'>Edit</button>
+                        <button id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton sanstitle' role='button' onclick='saveCard(this)'>Save</button>
+                        <button id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton sanstitle' role='button' onclick='cancelEdit(this)'>Cancel</button>                                   
+                    </span> 
                 </div>                            
                 <div style='height:1em;width:100%;clear:both;'></div>
                 <div id='announcements_{{card.link}}' class='announcements'></div>
@@ -174,18 +190,20 @@
                     <div id='content_{{card.link}}' class='card_content'>This card doesn't exist yet, edit it to make it real</div>
                 {% endif %}
                 <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
-                <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;'><input id='tags_{{card.link}}' type='text' ></input></div> 
-                <div><p class='card-control-buttons'>
-                    <a id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>
-                    <a id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>
-                    <a id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>
-                    </p>
+                <div class='cardBottomControls'>
+                    <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;'><input id='tags_{{card.link}}' type='text' ></input></div> 
+                    <button id='deleteCardButton_{{card.link}}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>
                 </div>
             </div>
             {% else %}
-                <div id='card_{{card.link}}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>
+                <div id='card_{{card.link}}' class='jumbotron card sanstitle' ondblclick='openEditor_dblclick(this)'>
                     <div>
-                        <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger' onclick='removeCard(this)' style='float:right;'><span class='glyphicon glyphicon-remove'></span></button></div>
+                        <button id='removeCard_{{card.link}}' type='button' class='btn btn-danger hideCardButton' onclick='removeCard(this)'><span class='glyphicon glyphicon-remove'></span></button></div>
+                        <p class='card-control-buttons'>
+                        <button id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</button>
+                        <button id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</button>
+                        <button id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</button>
+                        </p>
                     <div style='height:1em;clear:both;'></div>
                     <div id='announcements_{{card.link}}' class='announcements'></div>
                     {% if card.rendered_content is not none%}
@@ -195,12 +213,11 @@
                     {% endif %}
                     <div class="hiddenAdminStuff" style="display:none;"></div>
                     <div id='editor_{{card.link}}' class='epiceditor' style='margin-bottom:1em;'></div>
-                    <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;width:100%'><input id='tags_{{card.link}}' type='text' ></input></div>
-                    <div style='clear:both;'><p class='card-control-buttons'>
-                        <a id='editButton_{{card.link}}' class='btn btn-primary btn-sm editCardButton' role='button' onclick='openEditor(this)'>Edit</a>
-                        <a id='saveButton_{{card.link}}' class='btn btn-success btn-sm saveCardButton' role='button' onclick='saveCard(this)'>Save</a>
-                        <a id='cancelCardEditButton_{{card.link}}' class='btn btn-sm cancelCardEditButton' role='button' onclick='cancelEdit(this)'>Cancel</a>
-                    </p></div>
+                    <div class='cardBottomControls'>
+                        <div id='tagsBox_{{card.link}}' style='margin-bottom:.5em;width:100%'><input id='tags_{{card.link}}' type='text' ></input></div>
+                        <button id='deleteCardButton_{{card.link}}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>
+                    </div>
+
                 </div>
             {% endif %}
         {% endfor %}

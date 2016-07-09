@@ -17,7 +17,9 @@
       <script type="text/javascript" src="https://oss.maxcdn.com/libs/html5shiv/3.7.0/html5shiv.js"></script>
       <script type="text/javascript" src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>
     <![endif]-->
-	
+	<meta name="google-signin-scope" content="profile email">
+    <meta name="google-signin-client_id" content="707101593265-5pobbd5hk7pd1ue7bqfqbvg92l6akc0n.apps.googleusercontent.com">
+    <script src="https://apis.google.com/js/platform.js" async defer></script>
 	<!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.0/jquery.min.js"></script>
     <script src="static/js/jquery.waituntilexists.min.js"></script>
@@ -136,6 +138,38 @@
         function openAdmin(){
         
         };
+        
+        
+        
+        function onSignIn(googleUser) {
+            // Useful data for your client-side scripts:
+            var profile = googleUser.getBasicProfile();
+            console.log("ID: " + profile.getId()); // Don't send this directly to your server!
+            console.log("Name: " + profile.getName());
+            console.log("Image URL: " + profile.getImageUrl());
+            console.log("Email: " + profile.getEmail());
+
+            // The ID token you need to pass to your backend:
+            var id_token = googleUser.getAuthResponse().id_token;
+            console.log("ID Token: " + id_token);
+            googleToken = {'issuer':'google','token':id_token};
+            console.log(googleToken);
+            console.log(JSON.stringify(googleToken));
+            $.ajax({url:'/oauth2/signinwithtoken', 
+                        type:'POST', 
+                        contentType:'application/json',
+                        dataType:'json',
+                        data:JSON.stringify(googleToken),
+                        success: function(data){    
+                                    console.log("done with posting signin token");
+                                    console.log(data);
+                            },
+                        error: function(data){
+                                    console.log("error posting signin token");
+                                    console.log(data);
+                        }
+                    });  
+      };
       
 	</script>	
   </head>
@@ -152,11 +186,12 @@
 		  </button>
 		  <a class="navbar-brand" href="#" onclick="openAndGotoStartCard()">Card Wiki (beta 0.1.10.2)</a>
 		</div>
-
+<div class="g-signin2" data-onsuccess="onSignIn" data-theme="dark"></div>
 		<!-- Collect the nav links, forms, and other content for toggling -->
 		<div class="collapse navbar-collapse" id="cardwiki-navbar-collapse-1">
 		  <ul class="nav navbar-nav navbar-right">
 			<li><a href="#" onclick="createNewCard()">New Card</a></li>
+            <li><a href="#" onclick="loginWithGoogle()">Login With Google</a></li>
 			<li class="dropdown">
 				<a href="#" class="dropdown-toggle" data-toggle="dropdown">Admin<b class="caret"></b></a>
 				<ul class="dropdown-menu">

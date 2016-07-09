@@ -11,6 +11,8 @@ from cardwiki import Card
 import re
 from passlib.hash import bcrypt
 from jinja2 import Environment, PackageLoader
+import urllib.request
+import urllib.error
 
 base_url = "/"
 
@@ -80,12 +82,13 @@ def get_index():
     with session_scope() as session:
         for card_title in card_titles:
             card = cardwiki.get_newest_card(card_title, session)
+            c = Card(json_dict = card)
+            c.get_links_to_other_cards()
             if card:
                 cards0.append(card)                
             else:
                 cards0.append(Card(display_title=card_title))
     template =  env.get_template('index.html')
-    print(cards0)
     return template.render(cards=cards0)
     #return static_file('index.html', root='.')
 
@@ -99,6 +102,26 @@ def get_all_cards():
         return {"cards":cardwiki.
         get_cards(session),"status":"success"}
 
+@post('{0}oauth2/signinwithtoken'.format(base_url))
+def sign_in_with_token():
+    if request.json['issuer'] == 'google':
+        googleToken = request.json['token']
+        url = 'https://www.googleapis.com/oauth2/v3/tokeninfo?id_token='
+        url += googleToken
+        try:
+            response = urllib.request.urlopen(url)
+            if response.status == 200:
+                valid_user = response.read()
+                
+                ###make sure the token is valid and if it is, log the user in.  we probably need to save the token and figure expiration time
+            print(response)
+            print(response.read())
+            return ""
+        except urllib.error.URLError as e:
+            print (e)
+            #we can't log this guy in, his token is invalid or our token validation service is fubared
+        
+        
 @get('{0}cards/<linkable_title>'.format(base_url))
 def get_card(linkable_title):
     with session_scope() as session:

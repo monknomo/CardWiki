@@ -15,8 +15,8 @@ sudo apt-get install build-essential libssl-dev libffi-dev python-dev
 ### Windows Users
 
 ```
-pywin --venv create cardwiki
-pywin --venv activate cardwiki
+pywe --venv create cardwiki
+pywe --venv activate cardwiki
 ```
     
 Install required bcrypt libraries.  I find this a combo of annoying and difficult on Windows

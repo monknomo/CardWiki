@@ -1,0 +1,9 @@
+bottle==0.12.9
+Jinja2==2.8
+Markdown==2.6.6
+MarkupSafe==0.23
+passlib==1.6.5
+six==1.10.0
+SQLAlchemy==1.0.14
+SQLAlchemy-Continuum==1.2.4
+SQLAlchemy-Utils==0.32.7

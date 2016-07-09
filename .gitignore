@@ -26,8 +26,7 @@ $RECYCLE.BIN/
 .LSOverride
 
 # Icon must end with two \r
-Icon
-
+Icon
 # Thumbnails
 ._*
 
@@ -47,3 +46,4 @@ Temporary Items
 # sqlite database file
 *.db
 *.txt
+!requirements.txt

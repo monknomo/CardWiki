@@ -16,6 +16,8 @@ import datetime
 import copy
 import collections
 
+import re
+
 BASE_URL = "/"
 
 class InvalidKeyException(Exception):
@@ -85,6 +87,14 @@ class Card(collections.UserDict):
         else:
             raise InvalidKeyException("{0} is not an acceptable key/attribute of a Card".format(name))
     
+    def get_links_to_other_cards(self):
+        result = re.findall(r'\[\[(.*?)\]\]', self.content)
+        print("content")
+        print(self.content)
+        print("links to other cards: ")
+        print(result)
+        print("end links to other cards")
+    
     def __delattr__(self, name):
         raise UndeletableAttributeException("Card does not allow attribute deletion")
     
@@ -135,8 +145,6 @@ def get_cards(session):
                        'link':card.link,
                        'current_version':len(card.versions.all())})
     return result
-
-
 
 def get_newest_card(link, session):
     """Returns a dictionary representing the newest card for a given link

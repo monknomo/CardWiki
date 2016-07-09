@@ -334,7 +334,7 @@ function listAllCards(){
 //This is for normal cards with a title.  Most cards are of this type        
 Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='openEditor_dblclick(this)'>"+
                             "<div class='card_title_holder'>" +
-                                "<span id='title_{0}' class='card_title'><h1>{2}</h1></span>" +
+                                "<span id='title_{0}' class='card_title'><h1><a href='{3}?cards={0}' onclick='appendCard(event, \"{0}\", \"{0}\")'>{2}</a></h1></span>" +
                                 "<span id='titleEditor_{0}' class='cardTitleEditor input-group input-group-lg'><input id='titleEditorInput_{0}' type='text' class='form-control'value='{2}'></input></span>" +                                
                                 "<span class='card-control-buttons'>"+
                                     "<button id='removeCard_{0}' type='button' class='btn btn-sm btn-danger hideCardButton' onclick='removeCard(this)'><span class='glyphicon glyphicon-remove'></span></button>" +
@@ -349,8 +349,8 @@ Card.card_template = "<div id='card_{0}' class='jumbotron card' ondblclick='open
                             "<div id='content_{0}' class='card_content'>{1}</div>"+
                             "<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
                             "<div class='cardBottomControls'>"+
-                                "<div id='tagsBox_{0}' style='margin-bottom:.5em;'><input id='tags_{0}' type='text' ></input></div> " +
-                                "<button id='deleteCardButton){0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
+                                "<div id='tagsBox_{0}' style='margin-bottom:.5em;width:100%'><input id='tags_{0}' type='text' ></input></div> " +
+                                "<button id='deleteCardButton_{0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
                             "</div>"+
                         "</div>";
 
@@ -369,7 +369,7 @@ Card.card_template_sans_title = "<div id='card_{0}' class='jumbotron card sansti
                                         "<div id='editor_{0}' class='epiceditor' style='margin-bottom:1em;'></div>" +
                                         "<div class='cardBottomControls'>"+
                                             "<div id='tagsBox_{0}' style='margin-bottom:.5em;width:100%'><input id='tags_{0}' type='text' ></input></div> " +
-                                            "<button id='deleteCardButton){0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
+                                            "<button id='deleteCardButton_{0}' class='btn btn-sm btn-danger deleteCardButton' role='button' onclick='deleteCard(this)'>Delete</button>"+
                                         "</div>"+
 
                                     "</div>";
@@ -390,8 +390,7 @@ Card.prototype.getHtml = function(){
         if(this.link.slice(0,2) == "__"){
             return Card.card_template_sans_title.format(this.link, this.rendered_content);
         }else{
-            //var pretty_title = this.title.replace("_", " ");
-            return Card.card_template.format(this.link, this.rendered_content, this.display_title);
+            return Card.card_template.format(this.link, this.rendered_content, this.display_title, this.parent.siteRoot);
         }
     }
 };
@@ -402,6 +401,7 @@ Card.prototype.viewMode = function(){
     $("div#content_"+ this.link).html(this.rendered_content);
     $('button#saveButton_'+this.link).hide();
     $('button#cancelCardEditButton_'+this.link).hide();
+    $('button#deleteCardButton_'+this.link).hide();
     $('span#titleEditor_'+this.link).hide();
     $("span#title_"+ this.link).show();
     $("div#content_"+ this.link).show();
@@ -433,7 +433,8 @@ Card.prototype.editMode = function(){
     $("button#editButton_"+ this.link).hide();
     $("button#removeCard_"+this.link).hide();
     $("button#saveButton_"+ this.link).show();
-    $("button#cancelCardEditButton_"+ this.link).show();    
+    $("button#cancelCardEditButton_"+ this.link).show();  
+$('button#deleteCardButton_'+this.link).show();    
     $("#editor_"+this.link).show();
     
     var cardSelector = $("div#card_"+this.link)
